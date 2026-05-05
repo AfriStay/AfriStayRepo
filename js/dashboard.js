@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Instant auth guard: redirect unauthenticated users before any UI renders
     const _authToken = localStorage.getItem('sb-xuxzeinufjpplxkerlsd-auth-token');
     if (!_authToken) {
-        window.location.replace('/Auth/?redirect=' + encodeURIComponent(window.location.href));
+        window.location.replace('/Auth/');
         return;
     }
 
@@ -1303,11 +1303,11 @@ async function initAuthAndRole() {
         const onOwnerDash = path.includes('/dashboards/owner');
 
         if (onAdminDash && CURRENT_ROLE !== 'admin') {
-            window.location.replace('/Auth/?redirect=' + encodeURIComponent(window.location.href));
+            window.location.replace('/Auth/');
             return;
         }
         if (onOwnerDash && CURRENT_ROLE !== 'owner' && CURRENT_ROLE !== 'admin') {
-            window.location.replace('/Auth/?redirect=' + encodeURIComponent(window.location.href));
+            window.location.replace('/Auth/');
             return;
         }
         if (!onAdminDash && !onOwnerDash && CURRENT_ROLE !== 'admin' && CURRENT_ROLE !== 'owner') {
