@@ -41,6 +41,7 @@ body {
     font-size: 50px;
     margin: 0;
     line-height: 1;
+    transform: translateX(30px);
 }
 
 
@@ -82,12 +83,11 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* CHANGED: Switched from 'center' to 'flex-start' so items don't push each other */
-    justify-content: flex-start; 
+    justify-content: flex-start;
     padding: 40px;
     position: relative;
-    
-    padding-top: 100px;
+    padding-top: 70px;
+
 }
 
 .title-group {
@@ -98,15 +98,16 @@ body {
     gap: 10px;
     z-index: 2;
     margin-bottom: 0;
+    padding-right: 0;
 }
 
 /* Big Mail Icon Styling */
 .big-mail-icon {
-    font-size: 220px;
+    font-size: 210px;
     color: #f5f5f5; /* Added transparency per design standard */
     
     /* CONTROL 3: Push the icon down away from the text */
-    margin-top: -20px; 
+    margin-top: 35px; 
 }
 
 /* RIGHT SIDE (WHITE) */
@@ -119,7 +120,7 @@ body {
     justify-content: flex-start;
     
     /* CONTROL 4: This sets where the "Touch" text starts */
-    padding-top: 100px; 
+    padding-top: 70px; 
 }
 
 .box-right h1.orange {
@@ -128,7 +129,7 @@ body {
     margin: 0;
     text-align: left;
     line-height: 1;
-    transform: translateX(-33px);
+    transform: translateX(-31px);
 }
 
 /* FORM STYLING */
