@@ -30,8 +30,8 @@ body {
     overflow: hidden;
     background-color: #f5f5f5;
     box-shadow: 0 20px 50px rgba(0,0,0,0.15);
-    margin-top: 150px; /* Space for fixed nav */
-    margin-bottom: 300px;  
+    margin-top: 100px;
+    margin-bottom: 120px;
 }
 
 
@@ -87,21 +87,17 @@ body {
     padding: 40px;
     position: relative;
     
-    /* CONTROL 1: This pushes everything down from the very top edge */
-    padding-top: 80px; 
+    padding-top: 100px;
 }
 
 .title-group {
     width: 100%;
     display: flex;
-    justify-content: flex-end; 
+    justify-content: flex-end;
     align-items: center;
     gap: 10px;
-    z-index: 2; 
-
-    /* CONTROL 2: Move "Get In" independent of the icon */
-    margin-bottom: 0px; /* Reset this */
-transform: translate(35px,-56px); /* Use this to nudge it higher/lower without moving the icon */
+    z-index: 2;
+    margin-bottom: 0;
 }
 
 /* Big Mail Icon Styling */
@@ -129,10 +125,10 @@ transform: translate(35px,-56px); /* Use this to nudge it higher/lower without m
 .box-right h1.orange {
     color: #EB6753;
     font-size: 50px;
-    margin: 0; 
+    margin: 0;
     text-align: left;
     line-height: 1;
-    transform: translate(-33px,-75px);
+    transform: translateX(-33px);
 }
 
 /* FORM STYLING */
@@ -143,8 +139,7 @@ transform: translate(35px,-56px); /* Use this to nudge it higher/lower without m
     width: 100%;
     max-height: 300px;
 
-    /* CONTROL 5: This moves the form down without moving "Touch" */
-    margin-top:-40px; 
+    margin-top: 16px;
 }
 
 /* SUBMIT BUTTON FIX */
@@ -196,7 +191,7 @@ transform: translate(35px,-56px); /* Use this to nudge it higher/lower without m
     
     .box {
         flex-direction: column;
-        margin: 120px 5% 60px;
+        margin: 120px 5% 120px;
         width: 90%;
         height: auto;
         border-radius: 20px;
