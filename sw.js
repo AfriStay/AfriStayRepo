@@ -8,7 +8,7 @@
  *   - External CDN (FA, Google Fonts, jsDelivr): cache-first
  */
 
-const SHELL_CACHE = 'afristay-shell-v4';
+const SHELL_CACHE = 'afristay-shell-v5';
 const IMG_CACHE   = 'afristay-imgs-v1';
 const OFFLINE_URL = '/offline.html';
 
@@ -28,14 +28,14 @@ const PRECACHE = [
     '/Style/auth.css',
     '/Style/dashboard.css',
     '/Style/contact.css',
-    '/js/config.js',
-    '/js/utils.js',
-    '/js/script.js',
-    '/js/auth.js',
-    '/js/profile.js',
-    '/js/home.js',
-    '/js/detail.js',
-    '/js/favorites.js',
+    '/js/config.js?v=5',
+    '/js/utils.js?v=5',
+    '/js/script.js?v=5',
+    '/js/auth.js?v=5',
+    '/js/profile.js?v=5',
+    '/js/home.js?v=5',
+    '/js/detail.js?v=5',
+    '/js/favorites.js?v=5',
     '/Pictures/favicon.png',
     OFFLINE_URL,
 ];

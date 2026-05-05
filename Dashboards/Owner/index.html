@@ -202,31 +202,23 @@
                 <div class="stat-card"><div class="stat-icon ic-pu"><i class="fa-solid fa-coins"></i></div><div class="stat-num" id="totalRevenue" style="font-size:18px;">—</div><div class="stat-lbl">My Revenue</div></div>
             </div>
 
-            <div class="data-section">
-                <div class="sec-head">
-                    <h2><i class="fa-solid fa-bell" style="color:var(--primary);margin-right:8px;"></i>Bookings Awaiting Approval</h2>
-                    <button class="btn-s" onclick="loadNewBookings()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
-                </div>
-                <div class="sec-body"><div id="newBookingsContainer"><p style="color:#bbb;text-align:center;padding:20px;">Loading...</p></div></div>
-            </div>
-
             <!-- CALENDAR HEATMAP -->
             <div class="data-section" style="margin-bottom:20px;">
                 <div class="sec-head">
                     <h2><i class="fa-solid fa-calendar-days" style="color:var(--primary);margin-right:8px;"></i>Booking Calendar</h2>
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <button class="btn-s" id="calPrev" onclick="shiftCalMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
-                        <span id="calMonthLabel" style="font-size:14px;font-weight:700;min-width:120px;text-align:center;"></span>
-                        <button class="btn-s" id="calNext" onclick="shiftCalMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button class="btn-s" onclick="shiftCalMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="calMonthLabel" style="font-size:14px;font-weight:700;min-width:130px;text-align:center;"></span>
+                        <button class="btn-s" onclick="shiftCalMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                        <select id="calYearSelect" onchange="calSetYear(this.value)" style="margin-left:8px;padding:5px 10px;border-radius:8px;border:1.5px solid #e8e8e8;font-size:13px;font-weight:600;cursor:pointer;outline:none;"></select>
                     </div>
                 </div>
-                <div class="sec-body">
-                    <div id="calHeatmap" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:8px 0;"></div>
-                    <div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:11px;color:#aaa;flex-wrap:wrap;">
-                        <span style="display:flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;border-radius:3px;background:#f0f0f0;display:inline-block;"></span> No bookings</span>
-                        <span style="display:flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;border-radius:3px;background:#fde68a;display:inline-block;"></span> 1</span>
-                        <span style="display:flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;border-radius:3px;background:#f97316;display:inline-block;"></span> 2–3</span>
-                        <span style="display:flex;align-items:center;gap:4px;"><span style="width:14px;height:14px;border-radius:3px;background:#EB6753;display:inline-block;"></span> 4+</span>
+                <div class="sec-body" style="padding:16px;">
+                    <div id="calHeatmap" style="width:100%;"></div>
+                    <div style="display:flex;align-items:center;gap:14px;margin-top:14px;font-size:12px;color:#888;">
+                        <span style="display:flex;align-items:center;gap:6px;"><span style="width:16px;height:16px;border-radius:50%;background:#f5f5f5;border:1px solid #e8e8e8;display:inline-block;"></span> Available</span>
+                        <span style="display:flex;align-items:center;gap:6px;"><span style="width:16px;height:16px;border-radius:50%;background:#EB6753;display:inline-block;"></span> Booked</span>
+                        <span style="display:flex;align-items:center;gap:6px;"><span style="width:16px;height:16px;border-radius:50%;border:2px solid #EB6753;display:inline-block;"></span> Today</span>
                     </div>
                 </div>
             </div>
@@ -640,87 +632,128 @@ async function ownerDeleteAccount(){
     }catch(err){window.toast('Failed: '+err.message,'error');}
 }
 
-// ── Booking Calendar Heatmap ──────────────────────────────────────
-let _calYear = new Date().getFullYear();
-let _calMonth = new Date().getMonth(); // 0-indexed
+// ── Booking Calendar ──────────────────────────────────────────────
+const _cal = { year: new Date().getFullYear(), month: new Date().getMonth() };
+const _today = new Date().toISOString().slice(0,10);
+
+function _calDraw(bookedSet) {
+    const hm  = document.getElementById('calHeatmap');
+    const lbl = document.getElementById('calMonthLabel');
+    if (!hm) return;
+    const y = _cal.year, m = _cal.month;
+    if (lbl) lbl.textContent = new Date(y, m, 1).toLocaleDateString('en-US', { month:'long', year:'numeric' });
+
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const firstDay    = new Date(y, m, 1).getDay();
+    const pad = n => String(n).padStart(2,'0');
+
+    let html = `<table style="width:100%;border-collapse:separate;border-spacing:6px;">
+        <thead><tr>${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d =>
+            `<th style="text-align:center;font-size:12px;font-weight:600;color:#bbb;padding:8px 0;">${d}</th>`
+        ).join('')}</tr></thead><tbody><tr>`;
+
+    // empty offset cells
+    for (let i = 0; i < firstDay; i++) html += '<td></td>';
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const ds      = `${y}-${pad(m+1)}-${pad(d)}`;
+        const booked  = bookedSet.has(ds);
+        const isToday = ds === _today;
+        const bg      = booked  ? '#EB6753' : 'transparent';
+        const color   = booked  ? '#fff'    : '#333';
+        const border  = isToday ? '2px solid #EB6753' : '2px solid transparent';
+        const fw      = booked || isToday ? '700' : '400';
+
+        html += `<td style="text-align:center;padding:2px;">
+            <div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                margin:0 auto;font-size:13px;font-weight:${fw};background:${bg};color:${color};
+                border:${border};box-sizing:border-box;transition:transform .12s;cursor:default;"
+                onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'"
+                title="${booked ? 'Booked' : ''}">${d}</div></td>`;
+
+        if ((firstDay + d) % 7 === 0 && d < daysInMonth) html += '</tr><tr>';
+    }
+    html += '</tr></tbody></table>';
+    hm.innerHTML = html;
+}
 
 async function renderCalHeatmap() {
-    const hm = document.getElementById('calHeatmap');
-    const lbl = document.getElementById('calMonthLabel');
-    if (!hm || !window.supabaseClient || !window.CURRENT_PROFILE) return;
+    const y = _cal.year, m = _cal.month; // snapshot before any await
+    _calDraw(new Set());
 
-    const monthName = new Date(_calYear, _calMonth, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    if (lbl) lbl.textContent = monthName;
+    if (!window.supabaseClient || typeof fetchOwnerListingIds !== 'function') return;
+    try {
+        const pad = n => String(n).padStart(2,'0');
+        const start = `${y}-${pad(m+1)}-01`;
+        const end   = `${y}-${pad(m+1)}-${pad(new Date(y, m+1, 0).getDate())}`;
 
-    // Fetch bookings for this owner in this month
-    const start = `${_calYear}-${String(_calMonth+1).padStart(2,'0')}-01`;
-    const end   = `${_calYear}-${String(_calMonth+1).padStart(2,'0')}-31`;
+        const ids = await fetchOwnerListingIds();
+        if (!ids.length) return;
 
-    const listingIds = window.OWNER_LISTING_IDS || [];
-    if (!listingIds.length) { hm.innerHTML = '<p style="color:#aaa;font-size:13px;grid-column:1/-1;">No listings yet.</p>'; return; }
+        const { data: bks, error: bErr } = await window.supabaseClient
+            .from('bookings').select('start_date,end_date')
+            .in('listing_id', ids)
+            .in('status', ['pending','awaiting_approval','approved','confirmed','completed'])
+            .lte('start_date', end).gte('end_date', start);
+        if (bErr) { console.error('[CAL] bookings error:', bErr.message); return; }
+        const bookedSet = new Set();
+        (bks||[]).forEach(b => {
+            let cur = new Date(b.start_date+'T00:00:00');
+            const end2 = new Date(b.end_date+'T00:00:00');
+            while (cur <= end2) {
+                bookedSet.add(cur.toISOString().slice(0,10));
+                cur.setDate(cur.getDate()+1);
+            }
+        });
+        // Only redraw if user hasn't navigated away during fetch
+        if (_cal.year === y && _cal.month === m) _calDraw(bookedSet);
+    } catch(e) { console.error('[CAL]', e); }
+}
 
-    const { data: bks } = await window.supabaseClient
-        .from('bookings')
-        .select('start_date, end_date')
-        .in('listing_id', listingIds)
-        .in('status', ['pending','awaiting_approval','approved','confirmed','completed'])
-        .lte('start_date', end)
-        .gte('end_date', start);
-
-    // Build a count map: date string → number of bookings covering that day
-    const countMap = {};
-    const daysInMonth = new Date(_calYear, _calMonth + 1, 0).getDate();
-    for (let d = 1; d <= daysInMonth; d++) {
-        const ds = `${_calYear}-${String(_calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        countMap[ds] = 0;
-    }
-    (bks || []).forEach(b => {
-        let cur = new Date(b.start_date + 'T00:00:00');
-        const eEnd = new Date(b.end_date + 'T00:00:00');
-        while (cur <= eEnd) {
-            const ds = cur.toISOString().slice(0, 10);
-            if (ds in countMap) countMap[ds]++;
-            cur.setDate(cur.getDate() + 1);
-        }
-    });
-
-    const firstDay = new Date(_calYear, _calMonth, 1).getDay(); // 0=Sun
-    const today = new Date().toISOString().slice(0, 10);
-
-    hm.innerHTML = '';
-    // Day headers
-    ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
-        const h = document.createElement('div');
-        h.style.cssText = 'text-align:center;font-size:10px;font-weight:700;color:#bbb;padding:2px 0;';
-        h.textContent = d;
-        hm.appendChild(h);
-    });
-    // Empty cells for offset
-    for (let i = 0; i < firstDay; i++) {
-        hm.appendChild(Object.assign(document.createElement('div'), { style: '' }));
-    }
-    // Day cells
-    for (let d = 1; d <= daysInMonth; d++) {
-        const ds  = `${_calYear}-${String(_calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const cnt = countMap[ds] || 0;
-        const bg  = cnt === 0 ? '#f0f0f0' : cnt === 1 ? '#fde68a' : cnt <= 3 ? '#f97316' : '#EB6753';
-        const cell = document.createElement('div');
-        cell.title = `${ds}: ${cnt} booking${cnt!==1?'s':''}`;
-        cell.style.cssText = `background:${bg};border-radius:4px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:${cnt>=2?'#fff':'#555'};cursor:default;${ds===today?'outline:2px solid #EB6753;':''}`;
-        cell.textContent = d;
-        hm.appendChild(cell);
+function rebuildYearSelect(selected) {
+    const ySel = document.getElementById('calYearSelect');
+    if (!ySel) return;
+    ySel.innerHTML = '';
+    const start = 2026;
+    const end   = Math.max(selected + 3, start + 3);
+    for (let y = start; y <= end; y++) {
+        const opt = document.createElement('option');
+        opt.value = y; opt.textContent = y;
+        if (y === selected) opt.selected = true;
+        ySel.appendChild(opt);
     }
 }
+
 window.shiftCalMonth = function(dir) {
-    _calMonth += dir;
-    if (_calMonth > 11) { _calMonth = 0; _calYear++; }
-    if (_calMonth < 0)  { _calMonth = 11; _calYear--; }
+    _cal.month += dir;
+    if (_cal.month > 11) { _cal.month = 0; _cal.year++; }
+    if (_cal.month < 0)  { _cal.month = 11; _cal.year--; }
+    // Update year selector if present
+    const ySel = document.getElementById('calYearSelect');
+    if (ySel) ySel.value = _cal.year;
     renderCalHeatmap();
 };
-// Auto-render when dashboard panel is first shown (CURRENT_PROFILE set after auth)
-document.addEventListener('afristay:profileReady', renderCalHeatmap);
-// Also render after a short delay in case event already fired
-setTimeout(() => { if (window.CURRENT_PROFILE) renderCalHeatmap(); }, 2000);
+window.calSetYear = function(y) {
+    _cal.year = parseInt(y);
+    rebuildYearSelect(_cal.year);
+    renderCalHeatmap();
+};
+
+// One-time init: wait for dashboard.js auth to set CURRENT_PROFILE, then load bookings
+(async function initCalBookings() {
+    let w = 0;
+    while (!window._dashProfileReady && w < 10000) {
+        await new Promise(r => setTimeout(r, 150));
+        w += 150;
+    }
+    if (window._dashProfileReady) renderCalHeatmap();
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+    const ySel = document.getElementById('calYearSelect');
+    rebuildYearSelect(_cal.year);
+    renderCalHeatmap();
+});
 
 // Sidebar toggle handled by initSidebarToggle() in dashboard.js
 

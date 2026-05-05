@@ -245,10 +245,8 @@ function injectStatSparkline(selector, sparkSvg, current, previous) {
     card.dataset.sparkInjected = '1';
     card.style.position = 'relative';
     const pct = previous > 0 ? Math.round((current - previous) / previous * 100) : null;
-    const trendCls = pct === null ? 'spark-flat' : pct > 0 ? 'spark-up' : pct < 0 ? 'spark-down' : 'spark-flat';
-    const trendTxt = pct === null ? '—' : `${pct > 0 ? '↑' : pct < 0 ? '↓' : ''}${Math.abs(pct)}% vs last week`;
     const lbl = card.querySelector('.stat-lbl');
-    if (lbl) lbl.insertAdjacentHTML('afterend', `<span class="spark-trend ${trendCls}">${trendTxt}</span>`);
+    void lbl;
     if (sparkSvg) card.insertAdjacentHTML('beforeend', `<div style="position:absolute;bottom:16px;right:16px;opacity:.75;">${sparkSvg}</div>`);
 }
 
@@ -1295,6 +1293,7 @@ async function initAuthAndRole() {
 
         CURRENT_PROFILE = profile;
         CURRENT_ROLE = (profile.role || 'user');
+        window._dashProfileReady = true;
         console.log(" [AUTH] Profile loaded. Role:", CURRENT_ROLE);
 
         // Enforce page-level role access
