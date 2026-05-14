@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AFRI-STAY ADMIN - UNIFIED DASHBOARD
  * Features: Authentication, Role-based UI, Navigation, Modals, Data Management
  * 
@@ -7,27 +7,27 @@
  *  - DEMO_MODE can be toggled for testing without real payments
  */
 
-console.log("🚀 [ADMIN] Loading dashboard.js...");
+console.log("ðŸš€ [ADMIN] Loading dashboard.js...");
 
 /* ===========================
    CONFIG
    =========================== */
 const DEMO_MODE = false; // Set to true only when testing with mock provider
 
-/* ═══════════════════════════════════════════════
-   EMAILJS CONFIG  — fill in after creating your account at emailjs.com
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   EMAILJS CONFIG  â€” fill in after creating your account at emailjs.com
    See EMAIL_SETUP.md for step-by-step instructions
-   ═══════════════════════════════════════════════ */
-// EmailJS removed — emails handled by Brevo edge functions
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+// EmailJS removed â€” emails handled by Brevo edge functions
 
-console.log("🎯 [ADMIN] Demo mode:", DEMO_MODE ? "ENABLED" : "DISABLED");
+console.log("ðŸŽ¯ [ADMIN] Demo mode:", DEMO_MODE ? "ENABLED" : "DISABLED");
 
-/* ═══════════════════════════════════════════════════════════════
-   AUDIT LOGGING  — fire-and-forget; never crashes the caller
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   AUDIT LOGGING  â€” fire-and-forget; never crashes the caller
    Calls the log_audit() SECURITY DEFINER RPC in Supabase.
    If the RPC itself fails, the DB-level fallback in log_audit()
    writes an error row automatically.
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function logAudit({ action, entityType = null, entityId = null, description = null, metadata = {}, isError = false }) {
     if (!window.supabaseClient) return;
     const actor = window.CURRENT_PROFILE;
@@ -46,11 +46,11 @@ function logAudit({ action, entityType = null, entityId = null, description = nu
 }
 window.logAudit = logAudit;;
 
-/* ═══════════════════════════════════════════════════
-   CLIENT-SIDE CACHE  ← reduces redundant DB calls
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   CLIENT-SIDE CACHE  â† reduces redundant DB calls
    Key structure:  'table:queryHash'
    Default TTL:    60s  (override per call)
-   ═══════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const _cache = {
     _store: Object.create(null),
     _ttl:   Object.create(null),
@@ -64,25 +64,25 @@ const _cache = {
     bust(pfx)  { Object.keys(this._store).filter(k => k.startsWith(pfx)).forEach(k => this.del(k)); }
 };
 
-/* Cached province list  — 5 min TTL */
+/* Cached province list  â€” 5 min TTL */
 async function cProvinces() {
     const hit = _cache.get('prov'); if (hit) return hit;
     const { data } = await _supabase.from('provinces').select('id,name').order('name');
     _cache.set('prov', data || [], 300000); return data || [];
 }
-/* Cached districts for a province — 5 min TTL */
+/* Cached districts for a province â€” 5 min TTL */
 async function cDistricts(provId) {
     const k = 'dist_' + provId; const hit = _cache.get(k); if (hit) return hit;
     const { data } = await _supabase.from('districts').select('id,name').eq('province_id', provId).order('name');
     _cache.set(k, data || [], 300000); return data || [];
 }
-/* Cached sectors for a district — 5 min TTL */
+/* Cached sectors for a district â€” 5 min TTL */
 async function cSectors(distId) {
     const k = 'sect_' + distId; const hit = _cache.get(k); if (hit) return hit;
     const { data } = await _supabase.from('sectors').select('id,name').eq('district_id', distId).order('name');
     _cache.set(k, data || [], 300000); return data || [];
 }
-/* First image per listing — 2 min TTL (batch) */
+/* First image per listing â€” 2 min TTL (batch) */
 async function cImageMap(ids) {
     if (!ids.length) return {};
     const key = 'imgs_' + ids.slice().sort().join('|').slice(0,80);
@@ -92,7 +92,7 @@ async function cImageMap(ids) {
     (data||[]).forEach(r => { if (!map[r.listing_id]) map[r.listing_id] = r.image_url; });
     _cache.set(key, map, 120000); return map;
 }
-/* Owner listing IDs — 30 s TTL */
+/* Owner listing IDs â€” 30 s TTL */
 async function cOwnerIds() {
     if (!CURRENT_PROFILE) return [];
     const k = 'ownIds_' + CURRENT_PROFILE.id; const hit = _cache.get(k); if (hit) return hit;
@@ -149,10 +149,10 @@ function toast(message, type = 'success', duration = 3500) {
 }
 window.toast = toast;
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    USER-FRIENDLY ERROR SANITIZER
    Maps raw DB / network errors to safe, readable messages.
-   ═══════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function sanitizeError(err) {
     const raw = (err?.message || err?.error_description || String(err) || '').toLowerCase();
     if (!raw || raw === 'undefined') return 'Something went wrong. Please try again.';
@@ -169,9 +169,9 @@ function sanitizeError(err) {
 }
 window.sanitizeError = sanitizeError;
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SKELETON LOADER HELPERS
-   ═══════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function skeletonCards(count = 6) {
     return Array.from({ length: count }, () =>
         `<div class="listing-card sk-card">
@@ -200,7 +200,7 @@ function skeletonGuard(container, ms = 12000) {
         const stillLoading = container.querySelector('.sk-card') ||
             container.textContent.includes('Loading');
         if (stillLoading) {
-            container.innerHTML = emptyState('⏱️', 'Taking too long', 'Check your connection and refresh the page.');
+            container.innerHTML = emptyState('â±ï¸', 'Taking too long', 'Check your connection and refresh the page.');
         }
     }, ms);
 }
@@ -216,9 +216,9 @@ function emptyState(icon, title, msg) {
     </div>`;
 }
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SPARKLINE HELPERS  (stat-card trend graphs)
-   ═══════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function makeSparkline(values, color = '#EB6753') {
     if (!values || values.length < 2) return '';
     const w = 72, h = 28;
@@ -283,16 +283,16 @@ async function loadSparklines() {
     } catch(e) { console.warn('Sparklines skipped:', e.message); }
 }
 
-/* ═══════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    OFFLINE DETECTION BANNER
-   ═══════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 (function initOfflineBanner() {
     function getBanner() {
         let b = document.getElementById('offlineBanner');
         if (!b) {
             b = document.createElement('div');
             b.id = 'offlineBanner';
-            b.innerHTML = `<i class="fa-solid fa-wifi-slash"></i><span>You're offline — some features may not work.</span><button class="ob-back" onclick="window.location.reload()">Retry</button>`;
+            b.innerHTML = `<i class="fa-solid fa-wifi-slash"></i><span>You're offline â€” some features may not work.</span><button class="ob-back" onclick="window.location.reload()">Retry</button>`;
             document.body.prepend(b);
         }
         return b;
@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    console.log("📱 [ADMIN] DOM loaded, initializing...");
+    console.log("ðŸ“± [ADMIN] DOM loaded, initializing...");
 
     // Step 0: Get Supabase client
     if (window.supabaseClient) {
@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    // Step 0.5: Fire-and-forget — expire stale bookings before loading UI
+    // Step 0.5: Fire-and-forget â€” expire stale bookings before loading UI
     fetch(CONFIG.FUNCTIONS_BASE + '/expire-bookings', { method: 'POST' }).catch(() => {});
 
     // Step 1: Re-parent modals and quick actions to body
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadAllCountsAndTables();
     loadNotificationBadges();
 
-    // Step 4.5: Realtime — refresh badges instantly when a new notification arrives
+    // Step 4.5: Realtime â€” refresh badges instantly when a new notification arrives
     _supabase.channel('notif-live')
         .on('postgres_changes', {
             event: 'INSERT', schema: 'public', table: 'notifications',
@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Signal that the profile is ready (triggers cal heatmap, etc.)
     document.dispatchEvent(new Event('afristay:profileReady'));
 
-    console.log("✨ [SPECIAL USER] Initialization complete!");
+    console.log("âœ¨ [SPECIAL USER] Initialization complete!");
 });
 
 /* ===========================
@@ -408,7 +408,7 @@ function injectDashboardStyles() {
         .promo-badge { background:#EB6753;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px;vertical-align:middle; }
         /* New bookings container */
         #newBookingsContainer { min-height: 100px; }
-        /* ── Amenity chips — forced override ── */
+        /* â”€â”€ Amenity chips â€” forced override â”€â”€ */
         #amenityCheckboxes { display:flex !important; flex-wrap:wrap !important; gap:8px !important; padding:4px 0 !important; align-items:flex-start !important; }
         #amenityCheckboxes button.am-chip {
             display:inline-flex !important; align-items:center !important; gap:6px !important;
@@ -435,7 +435,7 @@ function injectDashboardStyles() {
             border-color:#EB6753 !important;
         }
         #amenityCheckboxes button.am-chip.active i { color:#fff !important; }
-        /* ── Stepper +/- ── */
+        /* â”€â”€ Stepper +/- â”€â”€ */
         .stepper-wrap { display:flex !important; align-items:center !important; border:1.5px solid #e8e8e8 !important; border-radius:11px !important; overflow:hidden !important; background:#fff !important; }
         button.step-btn { width:38px !important; height:42px !important; border:none !important; background:none !important; font-size:18px !important; font-weight:700 !important; color:#555 !important; cursor:pointer !important; display:flex !important; align-items:center !important; justify-content:center !important; flex-shrink:0 !important; font-family:'Inter',sans-serif !important; line-height:1 !important; padding:0 !important; margin:0 !important; outline:none !important; }
         button.step-btn:hover { background:#fff0ee !important; color:#EB6753 !important; }
@@ -445,7 +445,7 @@ function injectDashboardStyles() {
 }
 
 function reparentModalsAndQuickActions() {
-    console.log("🔄 [ADMIN] Reparenting modals and quick actions...");
+    console.log("ðŸ”„ [ADMIN] Reparenting modals and quick actions...");
     injectDashboardStyles();
     
     const move = (selector) => {
@@ -467,7 +467,7 @@ function reparentModalsAndQuickActions() {
    UI EVENT BINDINGS
    =========================== */
 function bindUIInteractions() {
-    console.log("🎛️ [ADMIN] Binding UI interactions...");
+    console.log("ðŸŽ›ï¸ [ADMIN] Binding UI interactions...");
     
     const navButtons = $$('.nav-btn');
     const mobileMenuBtn = $('#mobileMenuBtn');
@@ -484,7 +484,7 @@ function bindUIInteractions() {
     navButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const tabName = btn.getAttribute('data-tab');
-            console.log("🔘 [NAV] Clicked tab:", tabName);
+            console.log("ðŸ”˜ [NAV] Clicked tab:", tabName);
             
             if (!tabName) return;
             
@@ -521,7 +521,7 @@ function bindUIInteractions() {
     // === Mobile Menu Toggle ===
     if (mobileMenuBtn && sidebar && overlay) {
         mobileMenuBtn.addEventListener('click', () => {
-            console.log("📱 [MOBILE] Toggling menu");
+            console.log("ðŸ“± [MOBILE] Toggling menu");
             sidebar.classList.toggle('active');
             overlay.classList.toggle('active');
         });
@@ -530,7 +530,7 @@ function bindUIInteractions() {
     // === Overlay Click (close sidebar) ===
     if (overlay && sidebar) {
         overlay.addEventListener('click', () => {
-            console.log("📱 [MOBILE] Closing sidebar via overlay");
+            console.log("ðŸ“± [MOBILE] Closing sidebar via overlay");
             sidebar.classList.remove('active');
             overlay.classList.remove('active');
         });
@@ -539,7 +539,7 @@ function bindUIInteractions() {
     // === Desktop Sidebar Collapse ===
     if (toggleSidebarBtn && sidebar) {
         toggleSidebarBtn.addEventListener('click', () => {
-            console.log("💻 [DESKTOP] Toggling sidebar collapse");
+            console.log("ðŸ’» [DESKTOP] Toggling sidebar collapse");
             sidebar.classList.toggle('collapsed');
         });
     }
@@ -548,7 +548,7 @@ function bindUIInteractions() {
     if (quickMainBtn) {
         quickMainBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            console.log("⚡ [QUICK] Toggling quick actions");
+            console.log("âš¡ [QUICK] Toggling quick actions");
             const qa = $('.quick-actions');
             if (qa) qa.classList.toggle('active');
         });
@@ -566,7 +566,7 @@ function bindUIInteractions() {
     $$('.form-modal, .modal').forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                console.log("🚪 [MODAL] Closing via overlay click");
+                console.log("ðŸšª [MODAL] Closing via overlay click");
                 modal.classList.remove('active');
             }
         });
@@ -576,7 +576,7 @@ function bindUIInteractions() {
     const openCreateListingBtn = $('#openCreateListingBtn');
     if (openCreateListingBtn) {
         openCreateListingBtn.addEventListener('click', () => {
-            console.log("➕ [LISTING] Opening create listing modal");
+            console.log("âž• [LISTING] Opening create listing modal");
             openModal('listingModal');
             loadAmenityCheckboxes();
         });
@@ -587,7 +587,7 @@ function bindUIInteractions() {
     if (listingForm) {
         listingForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            console.log("📝 [LISTING] Submitting listing form");
+            console.log("ðŸ“ [LISTING] Submitting listing form");
             await handleCreateListing();
             // Only close if listing was created (status shows success)
             const statusEl = document.getElementById('listingCreateStatus');
@@ -607,7 +607,7 @@ function bindUIInteractions() {
     
     chatItems.forEach(item => {
         item.addEventListener('click', () => {
-            console.log("💬 [CHAT] Selecting chat user");
+            console.log("ðŸ’¬ [CHAT] Selecting chat user");
             chatItems.forEach(i => i.classList.remove('active'));
             item.classList.add('active');
 
@@ -627,7 +627,7 @@ function bindUIInteractions() {
     // === Back to Chats (Mobile) ===
     if (backBtn) {
         backBtn.addEventListener('click', () => {
-            console.log("⬅️ [CHAT] Back to chats list");
+            console.log("â¬…ï¸ [CHAT] Back to chats list");
             const chatWindow = $('.chat-window');
             if (chatWindow) chatWindow.classList.remove('active');
         });
@@ -647,7 +647,7 @@ function bindUIInteractions() {
         await handleCreateEvent();
     });
 
-    // Promo form submit — modal is now self-built, listener kept harmless
+    // Promo form submit â€” modal is now self-built, listener kept harmless
     document.getElementById('promoForm')?.addEventListener('submit', async (e) => { e.preventDefault(); await handleCreatePromo(); });
 
     // === Settings Form Submit ===
@@ -660,7 +660,7 @@ function bindUIInteractions() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            console.log("🚪 [AUTH] Logout button clicked");
+            console.log("ðŸšª [AUTH] Logout button clicked");
             handleLogout();
         });
     }
@@ -741,10 +741,10 @@ function bindUIInteractions() {
     // load filter selects initially (call after auth)
     loadFilterProvinces();
 
-    // ── Sidebar toggle (desktop collapse + mobile slide) ──
+    // â”€â”€ Sidebar toggle (desktop collapse + mobile slide) â”€â”€
     initSidebarToggle();
 
-    // ── Per-tab search bindings ──
+    // â”€â”€ Per-tab search bindings â”€â”€
     function _bindSearch(inputId, fn) {
         const el = document.getElementById(inputId);
         if (!el) return;
@@ -797,11 +797,11 @@ function initSidebarToggle() {
     });
 }
 
-/* ══════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    NOTIFICATION BADGES  (Instagram-style tab counts)
-   ══════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-// type → badge element id mapping per role
+// type â†’ badge element id mapping per role
 const _NOTIF_BADGE_MAP = {
     admin: {
         'new_booking':        'badge-bookings',
@@ -830,7 +830,7 @@ async function loadNotificationBadges() {
     if (!_supabase || !CURRENT_PROFILE) return;
     const role = CURRENT_ROLE;
     const map  = _NOTIF_BADGE_MAP[role];
-    if (!map) return;   // 'user' role — no dashboard badges
+    if (!map) return;   // 'user' role â€” no dashboard badges
 
     try {
         const { data, error } = await _supabase
@@ -947,7 +947,7 @@ function runAdminSearch(query, filter) {
         case 'payouts':
             toast('Financial / Payouts tab coming soon.', 'info');
             break;
-        default: // all — search listings as primary
+        default: // all â€” search listings as primary
             navTo('listingsPanel', 'listings');
             const si2 = document.getElementById('listingSearchInput');
             if (si2) { si2.value = query; filterListings(); }
@@ -999,7 +999,7 @@ function updateFormLabels() {
 }
 window.updateFormLabels = updateFormLabels;
 
-// ── Stepper helper ──
+// â”€â”€ Stepper helper â”€â”€
 function stepField(id, delta) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -1008,7 +1008,7 @@ function stepField(id, delta) {
 }
 window.stepField = stepField;
 
-// ── FA6 Free icon map by slug (overrides any broken DB icons) ──
+// â”€â”€ FA6 Free icon map by slug (overrides any broken DB icons) â”€â”€
 const AMENITY_ICONS = {
     air_conditioning:  'fa-solid fa-snowflake',
     wifi:              'fa-solid fa-wifi',
@@ -1055,7 +1055,7 @@ const AMENITY_ICONS = {
     gps_navigation:    'fa-solid fa-location-dot',
 };
 
-// ── Amenity chip renderer — fetches from amenity_definitions table ──
+// â”€â”€ Amenity chip renderer â€” fetches from amenity_definitions table â”€â”€
 let _amenityCache = null; // cache full list so we only fetch once per session
 
 async function loadAmenityCheckboxes() {
@@ -1067,12 +1067,12 @@ async function loadAmenityCheckboxes() {
 
     // Wait for supabase to be ready (in case modal opens before auth init)
     if (!_supabase) {
-        container.innerHTML = '<span style="color:#bbb;font-size:13px;">Session not ready — please wait…</span>';
+        container.innerHTML = '<span style="color:#bbb;font-size:13px;">Session not ready â€” please waitâ€¦</span>';
         return;
     }
 
     // Show loading state
-    container.innerHTML = '<span style="color:#bbb;font-size:13px;"><i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Loading amenities…</span>';
+    container.innerHTML = '<span style="color:#bbb;font-size:13px;"><i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Loading amenitiesâ€¦</span>';
 
     try {
         // Fetch once and cache (now includes listing_type column)
@@ -1086,9 +1086,9 @@ async function loadAmenityCheckboxes() {
         }
 
         // Filter by listing_type column from DB:
-        //   'vehicle'  → only show for vehicle listings
-        //   'property' → only show for non-vehicle listings
-        //   'all'      → show for both
+        //   'vehicle'  â†’ only show for vehicle listings
+        //   'property' â†’ only show for non-vehicle listings
+        //   'all'      â†’ show for both
         const seenSlugs = new Set();
         const list = _amenityCache.filter(a => {
             const lt = (a.listing_type || 'all').toLowerCase();
@@ -1141,7 +1141,7 @@ async function loadAmenityCheckboxes() {
         const offline = !navigator.onLine;
         container.innerHTML = `<span style="color:#e0a0a0;font-size:13px;">
             <i class="fa-solid fa-${offline ? 'wifi-slash' : 'triangle-exclamation'}" style="margin-right:5px;"></i>
-            ${offline ? 'No internet — amenities unavailable' : 'Could not load amenities'}
+            ${offline ? 'No internet â€” amenities unavailable' : 'Could not load amenities'}
         </span>`;
     }
 }
@@ -1149,7 +1149,7 @@ window.loadAmenityCheckboxes = loadAmenityCheckboxes;
 
 function updateAmenitiesForCategory() {
     if (!document.getElementById('listingModal')?.classList.contains('active')) return;
-    // Don't clear _amenityCache — it's the full list; filtering is done inside loadAmenityCheckboxes
+    // Don't clear _amenityCache â€” it's the full list; filtering is done inside loadAmenityCheckboxes
     loadAmenityCheckboxes();
 }
 window.updateAmenitiesForCategory = updateAmenitiesForCategory;
@@ -1226,7 +1226,7 @@ function togglePanels(panelId) {
    MODAL MANAGEMENT
    =========================== */
 function openModal(modalId) {
-    console.log("🔓 [MODAL] Opening:", modalId);
+    console.log("ðŸ”“ [MODAL] Opening:", modalId);
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('active');
@@ -1240,7 +1240,7 @@ function openModal(modalId) {
 }
 
 function closeModal(modalId) {
-    console.log("🔒 [MODAL] Closing:", modalId);
+    console.log("ðŸ”’ [MODAL] Closing:", modalId);
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('active');
@@ -1257,7 +1257,7 @@ function closeModal(modalId) {
    AUTHENTICATION & ROLE
    =========================== */
 async function initAuthAndRole() {
-    console.log("🔐 [AUTH] Initializing authentication...");
+    console.log("ðŸ” [AUTH] Initializing authentication...");
     
     try {
         const { data: userData, error: userErr } = await _supabase.auth.getUser();
@@ -1270,7 +1270,7 @@ async function initAuthAndRole() {
         
         const user = userData?.user;
         if (!user) {
-            console.warn("! [AUTH] No logged-in user detected — redirecting to auth");
+            console.warn("! [AUTH] No logged-in user detected â€” redirecting to auth");
             window.location.replace('/Auth/?redirect=' + encodeURIComponent(window.location.href));
             return;
         }
@@ -1314,7 +1314,7 @@ async function initAuthAndRole() {
             return;
         }
 
-        // Banned users get nothing — redirect away regardless of page
+        // Banned users get nothing â€” redirect away regardless of page
         if (profile.banned) {
             await _supabase.auth.signOut();
             window.location.replace('/Auth/?error=banned');
@@ -1464,7 +1464,7 @@ async function toggleUserBan(userId, action) {
 }
 
 async function deleteUser(userId) {
-    if (!confirm('Delete this user from AfriStay AND Supabase Auth? This is permanent — they will be signed out immediately and cannot log back in.')) return;
+    if (!confirm('Delete this user from AfriStay AND Supabase Auth? This is permanent â€” they will be signed out immediately and cannot log back in.')) return;
     try {
         const { data: { session } } = await _supabase.auth.getSession();
         const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/delete-account`, {
@@ -1498,14 +1498,14 @@ window.deleteUser = deleteUser;
    ROLE-BASED UI CONTROL
    =========================== */
 function applyRoleToUI(role) {
-    console.log("🎭 [ROLE] Applying role-based UI for:", role || "GUEST");
+    console.log("ðŸŽ­ [ROLE] Applying role-based UI for:", role || "GUEST");
     
     // Helper functions
     const show = (tabName) => {
         const btn = $(`.nav-btn[data-tab="${tabName}"]`);
         if (btn) {
             btn.style.display = '';
-            console.log(`  👁️ Showing tab: ${tabName}`);
+            console.log(`  ðŸ‘ï¸ Showing tab: ${tabName}`);
         }
     };
     
@@ -1513,7 +1513,7 @@ function applyRoleToUI(role) {
         const btn = $(`.nav-btn[data-tab="${tabName}"]`);
         if (btn) {
             btn.style.display = 'none';
-            console.log(`  🙈 Hiding tab: ${tabName}`);
+            console.log(`  ðŸ™ˆ Hiding tab: ${tabName}`);
         }
     };
 
@@ -1540,7 +1540,7 @@ function applyRoleToUI(role) {
 
     // ADMIN: sees everything
     if (role === 'admin') {
-        console.log("  👑 ADMIN role - showing all features");
+        console.log("  ðŸ‘‘ ADMIN role - showing all features");
         ['users', 'messages', 'listing-requests', 'events', 'promotions'].forEach(t => show(t));
         if (createListingBtn) createListingBtn.style.display = '';
         if (quickMenu) quickMenu.querySelectorAll('button').forEach(b => b.style.display = '');
@@ -1576,7 +1576,7 @@ function applyRoleToUI(role) {
             ?.querySelector('.stat-label, .stat-lbl, p, label, small, span:not(#totalRevenue)');
         if (revLbl) revLbl.textContent = 'My Revenue';
 
-        // Hide the "New Listings" pending widget — only admins need it
+        // Hide the "New Listings" pending widget â€” only admins need it
         setTimeout(() => {
             const pendingWrap = document.getElementById('dashPendingListings')
                 ?.closest('.data-section, [class*=section]');
@@ -1598,7 +1598,7 @@ function applyRoleToUI(role) {
     } 
     // USER: minimal access
     else if (role === 'user') {
-        console.log("  👤 USER role - showing user features");
+        console.log("  ðŸ‘¤ USER role - showing user features");
         show('dashboard');
         show('bookings');
         show('messages');
@@ -1692,7 +1692,7 @@ async function loadListingsGrid(filters = {}, page = 0) {
         const hasPendingEdit = pendingEditSet.has(l.id);
         const card = document.createElement('div');
         card.className = 'listing-card';
-        // ── build action button block ───────────────────────────────────────
+        // â”€â”€ build action button block â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const availNotBooked = l.availability_status !== 'booked';
         const isAvail        = l.availability_status === 'available';
         const availBtn = availNotBooked
@@ -1721,7 +1721,7 @@ async function loadListingsGrid(filters = {}, page = 0) {
                     <div style="display:grid;grid-template-columns:${availBtn ? '1fr 1fr' : '1fr'};gap:6px;">${availBtn}${deleteBtn}</div>`;
             }
         }
-        // ───────────────────────────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         card.innerHTML = `
             <a href="/Listings/Detail/?id=${l.id}" style="text-decoration:none;color:inherit;" class="lc-img">
                 ${thumb
@@ -1733,7 +1733,7 @@ async function loadListingsGrid(filters = {}, page = 0) {
             </a>
             <div class="lc-body">
                 <a href="/Listings/Detail/?id=${l.id}" style="text-decoration:none;"><p class="lc-title">${escapeHtml(l.title)}</p></a>
-                <p class="lc-meta">${escapeHtml(l.category_slug||'')}${CURRENT_ROLE==='admin'?' · '+escapeHtml(ownerMap[l.owner_id]||'Unknown'):''}</p>
+                <p class="lc-meta">${escapeHtml(l.category_slug||'')}${CURRENT_ROLE==='admin'?' Â· '+escapeHtml(ownerMap[l.owner_id]||'Unknown'):''}</p>
                 <p class="lc-price">${Number(l.price_display||l.price||0).toLocaleString()} <span style="font-size:11px;font-weight:500;color:#bbb;">${l.currency||'RWF'}</span></p>
                 ${actionsHtml ? `<div class="lc-actions">${actionsHtml}</div>` : ''}
             </div>
@@ -1757,7 +1757,7 @@ async function loadListingsGrid(filters = {}, page = 0) {
 
 
 async function loadAllCountsAndTables() {
-    console.log("📊 [DATA] Loading all data...");
+    console.log("ðŸ“Š [DATA] Loading all data...");
     await Promise.all([
         loadCounts(),
         loadListingsTable(),
@@ -1781,7 +1781,7 @@ async function loadAllCountsAndTables() {
 }
 
 async function loadCounts() {
-    console.log("🔢 [COUNTS] Loading dashboard counts...");
+    console.log("ðŸ”¢ [COUNTS] Loading dashboard counts...");
     
     try {
         if (!CURRENT_ROLE) {
@@ -1878,7 +1878,7 @@ function setCount(selector, value) {
     const el = $(selector);
     if (el) {
         el.innerText = value;
-        console.log(`  📝 Set ${selector} = ${value}`);
+        console.log(`  ðŸ“ Set ${selector} = ${value}`);
     }
 }
 
@@ -1927,7 +1927,7 @@ async function _searchOwners(e) {
         const row = document.createElement('div');
         row.className = 'search-result-item';
         row.style.cssText = hasPhone ? '' : 'background:#fff8f0;';
-        row.innerHTML = `<span>${escapeHtml(u.full_name)}${u.email ? ' — ' + escapeHtml(u.email) : ''}</span>`
+        row.innerHTML = `<span>${escapeHtml(u.full_name)}${u.email ? ' â€” ' + escapeHtml(u.email) : ''}</span>`
             + (!hasPhone ? `<span style="margin-left:8px;font-size:11px;font-weight:700;color:#e67e22;background:#fff3cd;padding:2px 6px;border-radius:4px;">No phone</span>` : '');
         row.onclick = () => {
             document.getElementById('selectedOwnerId').value = u.id;
@@ -2023,7 +2023,7 @@ async function loadListingsTable(page = 0) {
    BOOKINGS TABLE
    =========================== */
 async function loadBookingsTable(page = 0, searchTerm = '') {
-    console.log("📅 [BOOKINGS] Loading bookings table...");
+    console.log("ðŸ“… [BOOKINGS] Loading bookings table...");
 
     const tbody = $('#allBookingsBody');
     if (!tbody) {
@@ -2031,7 +2031,7 @@ async function loadBookingsTable(page = 0, searchTerm = '') {
         return;
     }
 
-    tbody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
 
     try {
         let q = _supabase.from('bookings').select('id, listing_id, start_date, end_date, total_amount, status, payment_status, payment_method, payment_deadline, user_id, guest_name, guest_email, created_at, category_slug, price_zone', { count: 'exact' });
@@ -2101,8 +2101,8 @@ async function loadBookingsTable(page = 0, searchTerm = '') {
             const hasFailed   = r.status === 'payment_failed';
 
             const statusLabels = {
-                awaiting_approval: '⏳ Awaiting Approval',
-                pending:           '⏳ Pending',
+                awaiting_approval: 'â³ Awaiting Approval',
+                pending:           'â³ Pending',
                 payment_pending:   ' Charging...',
                 payment_failed:    ' Payment Failed',
                 confirmed:         ' Confirmed',
@@ -2113,7 +2113,7 @@ async function loadBookingsTable(page = 0, searchTerm = '') {
             };
             const statusLabel = statusLabels[r.status] || r.status;
             const fmtAmt = Number(r.total_amount || 0).toLocaleString('en-RW');
-            const pmLabel = (r.payment_method || '—').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+            const pmLabel = (r.payment_method || 'â€”').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
 
             const ps = _paymentBadge(r);
             row.style.borderLeft = `3px solid ${ps.borderColor}`;
@@ -2121,7 +2121,7 @@ async function loadBookingsTable(page = 0, searchTerm = '') {
                 <td><input type="checkbox" class="booking-cb" data-id="${r.id}" onchange="toggleBookingCheck('${r.id}',this.checked)" style="width:15px;height:15px;accent-color:var(--primary,#EB6753);"></td>
                 <td>${i + 1}.</td>
                 <td style="font-family:monospace;font-size:12px;">${shortId(r.id)}</td>
-                <td>${escapeHtml(listing?.title || '—')}</td>
+                <td>${escapeHtml(listing?.title || 'â€”')}</td>
                 <td style="font-size:12px;">${r.guest_name || shortId(r.user_id)}<br><span style="color:#aaa;font-size:11px;">${r.guest_email || ''}</span></td>
                 <td style="font-size:12px;">
                     <span style="font-size:10px;color:#aaa;">${isVehRow ? 'Pick-up' : 'Check-in'}:</span> ${r.start_date}<br>
@@ -2174,17 +2174,17 @@ async function loadBookingsTable(page = 0, searchTerm = '') {
    USERS TABLE
    =========================== */
 async function loadUsersTable(searchTerm = '', page = 0) {
-    console.log("👥 [USERS] Loading users table (search:", searchTerm || 'none', ")");
+    console.log("ðŸ‘¥ [USERS] Loading users table (search:", searchTerm || 'none', ")");
 
     const tbody = $('#usersTableBody');
     if (!tbody) return;
 
     if (CURRENT_ROLE !== 'admin') {
-        tbody.innerHTML = '<tr><td colspan="8">Only admins can manage users.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7">Only admins can manage users.</td></tr>';
         return;
     }
 
-    tbody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
 
     try {
         const PAGE_SIZE = 15;
@@ -2207,7 +2207,7 @@ async function loadUsersTable(searchTerm = '', page = 0) {
             return;
         }
         if (!data || !data.length) {
-            tbody.innerHTML = '<tr><td colspan="8">No users found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7">No users found.</td></tr>';
             return;
         }
 
@@ -2225,21 +2225,26 @@ async function loadUsersTable(searchTerm = '', page = 0) {
             `;
 
             const isBanned = u.banned === true;
-            const actionSelectHtml = (isBanned
-                ? `<button class="btn-small" onclick="toggleUserBan('${u.id}','active')" style="background:#e8f8f0;color:#27ae60;border:1px solid #a9dfbf;font-weight:600;gap:4px;"><i class="fa-solid fa-unlock"></i> Unban</button>`
-                : `<button class="btn-small" onclick="toggleUserBan('${u.id}','banned')" style="background:#fde8e8;color:#e74c3c;border:1px solid #f5c6c6;font-weight:600;gap:4px;"><i class="fa-solid fa-ban"></i> Ban</button>`) +
-                `<button class="btn-small" onclick="impersonateUser('${u.id}','${escapeHtml(u.email||'').replace(/'/g,'&apos;')}')" style="background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd;font-weight:600;gap:4px;margin-left:4px;" title="Login as this user"><i class="fa-solid fa-user-secret"></i></button>`;
+            const safeEmail = escapeHtml(u.email||'').replace(/'/g,'&apos;');
+            const safeName  = escapeHtml(u.full_name||u.email||'').replace(/'/g,'&apos;');
 
             tr.innerHTML = `
                 <td>${rowNum}.</td>
-                <td>${escapeHtml(u.full_name || '')}</td>
-                <td>${escapeHtml(u.email || '')}</td>
-                <td>${escapeHtml(u.phone || '')}</td>
+                <td style="font-weight:600;">${escapeHtml(u.full_name || 'â€”')}</td>
+                <td style="color:#666;font-size:12px;">${escapeHtml(u.email || 'â€”')}</td>
+                <td style="color:#888;font-size:12px;">${escapeHtml(u.phone || 'â€”')}</td>
                 <td>${roleSelectHtml}</td>
-                <td>-</td>
-                <td>${actionSelectHtml}</td>
+                <td>â€”</td>
                 <td>
-                <button class="btn-small" onclick="deleteUser('${u.id}')" style="background:#fde8e8;color:#e74c3c;border:1px solid #f5c6c6;font-weight:600;gap:4px;"><i class="fa-solid fa-trash"></i> Delete</button>
+                  <div class="user-actions">
+                    ${isBanned
+                        ? `<button class="ua-btn" onclick="toggleUserBan('${u.id}','active')" style="background:#e8f8f0;color:#27ae60;border:1.5px solid #a9dfbf;" title="Unban user"><i class="fa-solid fa-unlock"></i> <span>Unban</span></button>`
+                        : `<button class="ua-btn" onclick="toggleUserBan('${u.id}','banned')" style="background:#fde8e8;color:#e74c3c;border:1.5px solid #f5c6c6;" title="Ban user"><i class="fa-solid fa-ban"></i> <span>Ban</span></button>`
+                    }
+                    <button class="ua-btn" onclick="impersonateUser('${u.id}','${safeEmail}')" style="background:#f0f9ff;color:#0369a1;border:1.5px solid #bae6fd;" title="Login as this user"><i class="fa-solid fa-user-secret"></i></button>
+                    <button class="ua-btn" onclick="exportSingleUser('${u.id}','${safeName}')" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #bbf7d0;" title="Export all user data"><i class="fa-solid fa-file-export"></i></button>
+                    <button class="ua-btn" onclick="deleteUser('${u.id}')" style="background:#fde8e8;color:#e74c3c;border:1.5px solid #f5c6c6;" title="Delete user"><i class="fa-solid fa-trash"></i></button>
+                  </div>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -2253,7 +2258,7 @@ async function loadUsersTable(searchTerm = '', page = 0) {
         console.log(" [USERS] Table populated");
     } catch (err) {
         console.error(' [USERS] Exception:', err);
-        tbody.innerHTML = '<tr><td colspan="8">Failed to load users</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7">Failed to load users</td></tr>';
     }
 }
 
@@ -2263,12 +2268,12 @@ async function loadUsersTable(searchTerm = '', page = 0) {
    MESSAGES PANEL
    =========================== */
 async function loadMessagesPreview() {
-    console.log("💬 [MESSAGES] Loading messages...");
+    console.log("ðŸ’¬ [MESSAGES] Loading messages...");
     const list = $('#chatUserList');
     if (!list) return;
 
     const headerHTML = '<div class="chat-list-header">Inbox</div>';
-    list.innerHTML = headerHTML + '<div style="padding:40px 20px;text-align:center;color:#ccc;"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i><span style="font-size:13px;">Loading…</span></div>';
+    list.innerHTML = headerHTML + '<div style="padding:40px 20px;text-align:center;color:#ccc;"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;display:block;margin-bottom:10px;"></i><span style="font-size:13px;">Loadingâ€¦</span></div>';
 
     if (!CURRENT_ROLE || CURRENT_ROLE !== 'admin') {
         list.innerHTML = headerHTML + '<div style="padding:40px 20px;text-align:center;color:#ccc;"><i class="fa-solid fa-lock" style="font-size:28px;display:block;margin-bottom:10px;"></i><span style="font-size:13px;">Admin access only.</span></div>';
@@ -2304,7 +2309,7 @@ async function loadMessagesPreview() {
             ? m.name
             : (m.email ? m.email.split('@')[0] : 'Unknown');
         const initial = displayName[0].toUpperCase();
-        const preview = (m.message || '').slice(0, 55) + ((m.message || '').length > 55 ? '…' : '');
+        const preview = (m.message || '').slice(0, 55) + ((m.message || '').length > 55 ? 'â€¦' : '');
         const timeStr = m.created_at ? _fmtMsgTime(m.created_at) : '';
         el.innerHTML = `
             <div class="chat-user-avatar">${escapeHtml(initial)}</div>
@@ -2370,7 +2375,7 @@ function showMessageDetail(m) {
             <!-- Meta row -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
                 <span style="font-size:12px;color:#bbb;"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>${date}</span>
-                <span style="color:#e8e8e8;">·</span>
+                <span style="color:#e8e8e8;">Â·</span>
                 <a href="mailto:${escapeHtml(m.email || '')}" style="font-size:12px;color:var(--primary);text-decoration:none;font-weight:600;">${escapeHtml(m.email || '')}</a>
             </div>
             <!-- Message bubble -->
@@ -2414,7 +2419,7 @@ async function approveListing(listingId) {
 }
 
 async function toggleListingAvailability(listingId, current) {
-    console.log("🔄 [ACTION] Toggling listing availability:", listingId, current);
+    console.log("ðŸ”„ [ACTION] Toggling listing availability:", listingId, current);
     if (current !== 'available') {
         // Make available immediately (manual override)
         try {
@@ -2433,7 +2438,7 @@ async function toggleListingAvailability(listingId, current) {
         }
         return;
     }
-    // Setting unavailable — show date-picker modal
+    // Setting unavailable â€” show date-picker modal
     openUnavailabilityModal(listingId);
 }
 
@@ -2473,7 +2478,7 @@ function openUnavailabilityModal(listingId) {
       onchange="window.toggleUnavailDateFields(this.checked)">
     <div>
       <p style="margin:0;font-size:13px;font-weight:700;color:#1a1a1a;">Until I make it available again</p>
-      <p style="margin:2px 0 0;font-size:11px;color:#aaa;">No end date — you'll manually re-enable it.</p>
+      <p style="margin:2px 0 0;font-size:11px;color:#aaa;">No end date â€” you'll manually re-enable it.</p>
     </div>
   </label>
 
@@ -2524,12 +2529,12 @@ async function confirmSetUnavailable(listingId) {
 }
 window.confirmSetUnavailable = confirmSetUnavailable;
 
-/* ═══════════════════════════════════════════════════════════════
-   APPROVE / REJECT BOOKING — v3 clean flow (no payment)
-   Owner approves → calls approve-booking edge function →
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   APPROVE / REJECT BOOKING â€” v3 clean flow (no payment)
+   Owner approves â†’ calls approve-booking edge function â†’
    Edge function emails guest a "Confirm Your Stay" link
    (When DPO is live: edge function emails a payment link instead)
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function approveBooking(bookingId) {
     console.log(' [APPROVE] Owner approving booking:', bookingId);
 
@@ -2541,7 +2546,7 @@ async function approveBooking(bookingId) {
     const title = booking.listings?.title || 'this listing';
     if (!confirm(`Approve booking for "${title}"?\n\nThe guest will receive an email to confirm their stay.`)) return;
 
-    toast('Approving booking…', 'info');
+    toast('Approving bookingâ€¦', 'info');
 
     try {
         // Get auth session for the function call
@@ -2563,7 +2568,7 @@ async function approveBooking(bookingId) {
 
         console.log(' [APPROVE] Done:', data);
 
-        // approve-booking edge function already emails the guest — no duplicate send needed
+        // approve-booking edge function already emails the guest â€” no duplicate send needed
 
         if (data.dpo_active) {
             toast(' Approved! Guest received a payment link.', 'success');
@@ -2593,7 +2598,7 @@ async function rejectBooking(bookingId) {
     const reason = prompt(`Reject booking for "${title}"?\n\nOptional: enter a reason for the guest (or leave blank):`) ;
     if (reason === null) return; // cancelled
 
-    toast('Rejecting booking…', 'info');
+    toast('Rejecting bookingâ€¦', 'info');
 
     try {
         const { data: { session } } = await _supabase.auth.getSession();
@@ -2622,7 +2627,7 @@ async function rejectBooking(bookingId) {
             }).eq('id', booking.listing_id);
         }
 
-        // Mark any existing receipt as cancelled (don't delete — keep for audit trail)
+        // Mark any existing receipt as cancelled (don't delete â€” keep for audit trail)
         await _supabase.from('digital_receipts')
             .update({
                 cancelled_at:      new Date().toISOString(),
@@ -2632,9 +2637,9 @@ async function rejectBooking(bookingId) {
             .eq('booking_id', bookingId)
             .is('cancelled_at', null); // only if not already cancelled
 
-        // reject-booking edge function already emails the guest — no duplicate send needed
+        // reject-booking edge function already emails the guest â€” no duplicate send needed
 
-        logAudit({ action: 'booking_rejected', entityType: 'booking', entityId: bookingId, description: 'Booking rejected for "' + title + '"' + (reason ? ' — reason: ' + reason : '') });
+        logAudit({ action: 'booking_rejected', entityType: 'booking', entityId: bookingId, description: 'Booking rejected for "' + title + '"' + (reason ? ' â€” reason: ' + reason : '') });
         toast('Booking rejected. Guest notified by email.', 'success');
         await loadBookingsTable();
         await filterListings();
@@ -2688,7 +2693,7 @@ async function demoMarkPaid(bookingId) {
 }
 
 async function promoteToOwner(userId) {
-    console.log("⬆️ [ACTION] Promoting user to owner:", userId);
+    console.log("â¬†ï¸ [ACTION] Promoting user to owner:", userId);
     
     if (!confirm('Promote this user to Owner?')) return;
     
@@ -2710,7 +2715,7 @@ async function promoteToOwner(userId) {
 }
 
 async function handleCreateListing() {
-    console.log("➕ [LISTING] Creating new listing (with media)...");
+    console.log("âž• [LISTING] Creating new listing (with media)...");
 
     if (CURRENT_PROFILE?.banned) {
         toast('Your account has been suspended. You cannot create listings.', 'error');
@@ -2795,12 +2800,12 @@ async function handleCreateListing() {
     if (images.length > 10) { setStatus('Max 10 images allowed.', 'error'); return; }
     if (videos.length > 3)  { setStatus('Max 3 videos allowed.', 'error'); return; }
 
-    if (createBtn) { createBtn.disabled = true; createBtn.textContent = 'Working…'; }
+    if (createBtn) { createBtn.disabled = true; createBtn.textContent = 'Workingâ€¦'; }
     clearStatus();
 
     try {
         // 1) Create listing row
-        setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Saving your listing…', 'info');
+        setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Saving your listingâ€¦', 'info');
         const { data: created, error: createErr } = await _supabase
             .from('listings')
             .insert([{
@@ -2836,11 +2841,11 @@ async function handleCreateListing() {
         const uploadedImageRows = [];
         for (let i = 0; i < images.length; i++) {
             const file = images[i];
-            setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading image ${i + 1} of ${images.length}: <strong>${file.name}</strong>…`, 'info');
+            setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading image ${i + 1} of ${images.length}: <strong>${file.name}</strong>â€¦`, 'info');
             const path = `${ownerId}/${listingId}/${Date.now()}-${file.name}`;
             const { error: upErr } = await _supabase.storage.from('listing-images').upload(path, file, { upsert: false });
             if (upErr) {
-                setStatus(`<i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>Image <strong>${file.name}</strong> failed: ${upErr.message}. Continuing with next…`, 'warning');
+                setStatus(`<i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>Image <strong>${file.name}</strong> failed: ${upErr.message}. Continuing with nextâ€¦`, 'warning');
                 await new Promise(r => setTimeout(r, 1500));
                 continue;
             }
@@ -2856,11 +2861,11 @@ async function handleCreateListing() {
         const uploadedVideoRows = [];
         for (let i = 0; i < videos.length; i++) {
             const file = videos[i];
-            setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading video ${i + 1} of ${videos.length}: <strong>${file.name}</strong>…`, 'info');
+            setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading video ${i + 1} of ${videos.length}: <strong>${file.name}</strong>â€¦`, 'info');
             const path = `${ownerId}/${listingId}/${Date.now()}-${file.name}`;
             const { error: upErr } = await _supabase.storage.from('listing-videos').upload(path, file, { upsert: false });
             if (upErr) {
-                setStatus(`<i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>Video <strong>${file.name}</strong> failed: ${upErr.message}. Continuing with next…`, 'warning');
+                setStatus(`<i class="fa-solid fa-triangle-exclamation" style="margin-right:6px;"></i>Video <strong>${file.name}</strong> failed: ${upErr.message}. Continuing with nextâ€¦`, 'warning');
                 await new Promise(r => setTimeout(r, 1500));
                 continue;
             }
@@ -2889,12 +2894,12 @@ async function handleCreateListing() {
     }
 }
 
-// ── Edit Listing Modal ──────────────────────────────────────────────────────
+// â”€â”€ Edit Listing Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let _editState = null;
 
 async function openEditListingModal(listingId) {
     if (!_supabase || !CURRENT_PROFILE) return;
-    toast('Loading listing…', 'info');
+    toast('Loading listingâ€¦', 'info');
     try {
         const [listingRes, imagesRes, videosRes, provinces, featuredRes] = await Promise.all([
             _supabase.from('listings').select('*').eq('id', listingId).single(),
@@ -3023,7 +3028,7 @@ function _showEditModal(listing, images, videos, provinces, featuredCount) {
         <div><label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:5px;">Bathrooms</label><input id="eldBaths" type="number" min="0" value="${listing.bathroom_count ?? ''}" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
         <div><label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:5px;">Beds</label><input id="eldBeds" type="number" min="0" value="${listing.bed_count ?? ''}" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
         <div><label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:5px;">Max Guests</label><input id="eldMaxGuests" type="number" min="0" value="${listing.max_guests ?? ''}" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
-        <div><label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:5px;">Floor Area (m²)</label><input id="eldFloorArea" type="number" min="0" value="${listing.floor_area_sqm ?? ''}" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
+        <div><label style="display:block;font-size:12px;font-weight:600;color:#777;margin-bottom:5px;">Floor Area (mÂ²)</label><input id="eldFloorArea" type="number" min="0" value="${listing.floor_area_sqm ?? ''}" style="width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;box-sizing:border-box;"></div>
       </div>
     </div>
     <div id="eldVehSpecs" style="${isVehicle?'':'display:none;'}background:#fafafa;border:1px solid #eee;border-radius:10px;padding:16px;">
@@ -3039,7 +3044,7 @@ function _showEditModal(listing, images, videos, provinces, featuredCount) {
     </div>
     <div style="background:#fafafa;border:1px solid #eee;border-radius:10px;padding:16px;">
       <p style="margin:0 0 14px;font-size:13px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;">Amenities</p>
-      <div id="eldAmenities" style="display:flex;flex-wrap:wrap;gap:8px;"><span style="color:#bbb;font-size:13px;"><i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Loading…</span></div>
+      <div id="eldAmenities" style="display:flex;flex-wrap:wrap;gap:8px;"><span style="color:#bbb;font-size:13px;"><i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Loadingâ€¦</span></div>
     </div>
     <div style="background:#fafafa;border:1px solid #eee;border-radius:10px;padding:16px;">
       <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;">Images</p>
@@ -3097,7 +3102,7 @@ async function _editLoadDistricts(provId, selectedDistId) {
     const distSel = document.getElementById('eldDistrict');
     const sectSel = document.getElementById('eldSector');
     if (!distSel) return;
-    distSel.innerHTML = '<option value="">Loading…</option>';
+    distSel.innerHTML = '<option value="">Loadingâ€¦</option>';
     if (sectSel) sectSel.innerHTML = '<option value="">-- Select Sector --</option>';
     if (!provId) { distSel.innerHTML = '<option value="">-- Select District --</option>'; return; }
     const districts = await cDistricts(provId);
@@ -3110,7 +3115,7 @@ window._editLoadDistricts = _editLoadDistricts;
 async function _editLoadSectors(distId, selectedSectId) {
     const sectSel = document.getElementById('eldSector');
     if (!sectSel) return;
-    sectSel.innerHTML = '<option value="">Loading…</option>';
+    sectSel.innerHTML = '<option value="">Loadingâ€¦</option>';
     if (!distId) { sectSel.innerHTML = '<option value="">-- Select Sector --</option>'; return; }
     const sectors = await cSectors(distId);
     sectSel.innerHTML = '<option value="">-- Select Sector --</option>' +
@@ -3136,10 +3141,10 @@ async function _editLoadAmenities(isVehicle, selectedSlugs) {
     if (!container) return;
     const sb = _supabase || window.supabaseClient;
     if (!sb) {
-        container.innerHTML = '<span style="color:#bbb;font-size:13px;">Session not ready — please wait…</span>';
+        container.innerHTML = '<span style="color:#bbb;font-size:13px;">Session not ready â€” please waitâ€¦</span>';
         return;
     }
-    container.innerHTML = '<span style="color:#bbb;font-size:13px;"><i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Loading…</span>';
+    container.innerHTML = '<span style="color:#bbb;font-size:13px;"><i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Loadingâ€¦</span>';
     try {
         if (!_amenityCache) {
             const { data, error } = await sb.from('amenity_definitions').select('slug,label,icon,category,listing_type').order('label');
@@ -3179,7 +3184,7 @@ async function _editLoadAmenities(isVehicle, selectedSlugs) {
             });
         });
     } catch (err) {
-        container.innerHTML = `<span style="color:#e74c3c;font-size:13px;">Failed to load amenities: ${escapeHtml(err.message||String(err))} — <a href="#" onclick="_editLoadAmenities(${isVehicle},${JSON.stringify(selectedSlugs||[])});return false;" style="color:#e74c3c;">Retry</a></span>`;
+        container.innerHTML = `<span style="color:#e74c3c;font-size:13px;">Failed to load amenities: ${escapeHtml(err.message||String(err))} â€” <a href="#" onclick="_editLoadAmenities(${isVehicle},${JSON.stringify(selectedSlugs||[])});return false;" style="color:#e74c3c;">Retry</a></span>`;
         console.error('_editLoadAmenities error:', err);
     }
 }
@@ -3274,9 +3279,9 @@ async function handleSaveEditListing() {
     if (keptImages + newImageFiles.length > 10) { setStatus('Max 10 images allowed.', 'error'); return; }
     const keptVideos = document.querySelectorAll('#eldVideosContainer > div[id^="eldVid_"]').length - removedVideoIds.length;
     if (keptVideos + newVideoFiles.length > 3) { setStatus('Max 3 videos allowed.', 'error'); return; }
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:8px;"></i>Saving…'; }
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:8px;"></i>Savingâ€¦'; }
     try {
-        setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Saving changes…', 'info');
+        setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Saving changesâ€¦', 'info');
         const provinceId = document.getElementById('eldProvince')?.value || null;
         const districtId = document.getElementById('eldDistrict')?.value || null;
         const sectorId   = document.getElementById('eldSector')?.value   || null;
@@ -3305,13 +3310,13 @@ async function handleSaveEditListing() {
             vehicle_specs: vehicleSpecs, max_passengers: maxPassengers,
             amenities_data: amenitySlugs.length ? amenitySlugs : null,
         };
-        // ── OWNER FLOW: submit edit request for admin review ──
+        // â”€â”€ OWNER FLOW: submit edit request for admin review â”€â”€
         if (CURRENT_ROLE === 'owner') {
             // Upload new staging images (stored but not yet in listing_images)
             const newImageMeta = [];
             for (let i = 0; i < newImageFiles.length; i++) {
                 const file = newImageFiles[i];
-                setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading image ${i+1}/${newImageFiles.length}…`, 'info');
+                setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading image ${i+1}/${newImageFiles.length}â€¦`, 'info');
                 const path = `${ownerId}/${listingId}/staging/${Date.now()}-${file.name}`;
                 const { error: upErr } = await _supabase.storage.from('listing-images').upload(path, file, { upsert: false });
                 if (upErr) { console.warn('Staging image upload failed:', upErr); continue; }
@@ -3322,14 +3327,14 @@ async function handleSaveEditListing() {
             const newVideoMeta = [];
             for (let i = 0; i < newVideoFiles.length; i++) {
                 const file = newVideoFiles[i];
-                setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading video ${i+1}/${newVideoFiles.length}…`, 'info');
+                setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading video ${i+1}/${newVideoFiles.length}â€¦`, 'info');
                 const path = `${ownerId}/${listingId}/staging/${Date.now()}-${file.name}`;
                 const { error: upErr } = await _supabase.storage.from('listing-videos').upload(path, file, { upsert: false });
                 if (upErr) { console.warn('Staging video upload failed:', upErr); continue; }
                 const { data: urlData } = await _supabase.storage.from('listing-videos').getPublicUrl(path);
                 newVideoMeta.push({ url: urlData?.publicUrl || null, filename: file.name, mime_type: file.type });
             }
-            setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Submitting for admin review…', 'info');
+            setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Submitting for admin reviewâ€¦', 'info');
             const proposedChanges = {
                 ...updatePayload,
                 remove_image_ids: removedImageIds,
@@ -3352,7 +3357,7 @@ async function handleSaveEditListing() {
             return;
         }
 
-        // ── ADMIN FLOW: apply changes directly ──
+        // â”€â”€ ADMIN FLOW: apply changes directly â”€â”€
         if (CURRENT_ROLE === 'admin') {
             const featured   = document.getElementById('eldFeatured')?.checked || false;
             const commission = Number(document.getElementById('eldCommission')?.value) || 0;
@@ -3365,7 +3370,7 @@ async function handleSaveEditListing() {
         if (updateErr) throw updateErr;
         // 2) Delete removed images from storage + DB
         if (removedImageIds.length) {
-            setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Removing images…', 'info');
+            setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Removing imagesâ€¦', 'info');
             const { data: imgRows } = await _supabase.from('listing_images').select('id,image_url').in('id', removedImageIds);
             if (imgRows?.length) {
                 const paths = imgRows.map(r => { try { const u = new URL(r.image_url); return u.pathname.split('/object/public/listing-images/')[1] || null; } catch { return null; } }).filter(Boolean);
@@ -3375,7 +3380,7 @@ async function handleSaveEditListing() {
         }
         // 3) Delete removed videos from storage + DB
         if (removedVideoIds.length) {
-            setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Removing videos…', 'info');
+            setStatus('<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Removing videosâ€¦', 'info');
             const { data: vidRows } = await _supabase.from('listing_videos').select('id,video_url').in('id', removedVideoIds);
             if (vidRows?.length) {
                 const paths = vidRows.map(r => { try { const u = new URL(r.video_url); return u.pathname.split('/object/public/listing-videos/')[1] || null; } catch { return null; } }).filter(Boolean);
@@ -3386,7 +3391,7 @@ async function handleSaveEditListing() {
         // 4) Upload new images
         for (let i = 0; i < newImageFiles.length; i++) {
             const file = newImageFiles[i];
-            setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading image ${i+1}/${newImageFiles.length}…`, 'info');
+            setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading image ${i+1}/${newImageFiles.length}â€¦`, 'info');
             const path = `${ownerId}/${listingId}/${Date.now()}-${file.name}`;
             const { error: upErr } = await _supabase.storage.from('listing-images').upload(path, file, { upsert: false });
             if (upErr) { console.warn('Image upload failed:', upErr); continue; }
@@ -3396,7 +3401,7 @@ async function handleSaveEditListing() {
         // 5) Upload new videos
         for (let i = 0; i < newVideoFiles.length; i++) {
             const file = newVideoFiles[i];
-            setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading video ${i+1}/${newVideoFiles.length}…`, 'info');
+            setStatus(`<i class="fa-solid fa-circle-notch fa-spin" style="margin-right:6px;"></i>Uploading video ${i+1}/${newVideoFiles.length}â€¦`, 'info');
             const path = `${ownerId}/${listingId}/${Date.now()}-${file.name}`;
             const { error: upErr } = await _supabase.storage.from('listing-videos').upload(path, file, { upsert: false });
             if (upErr) { console.warn('Video upload failed:', upErr); continue; }
@@ -3416,7 +3421,7 @@ async function handleSaveEditListing() {
     }
 }
 window.handleSaveEditListing = handleSaveEditListing;
-// ── End Edit Listing Modal ──────────────────────────────────────────────────
+// â”€â”€ End Edit Listing Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function populatePromoListings() {
     const sel = document.getElementById('promoListingId');
@@ -3505,8 +3510,8 @@ function _paymentBadge(b) {
 }
 
 function shortId(id) {
-    if (!id) return '—';
-    return String(id).slice(0, 8) + '…';
+    if (!id) return 'â€”';
+    return String(id).slice(0, 8) + 'â€¦';
 }
 
 function escapeHtml(s) {
@@ -3525,13 +3530,13 @@ function escapeHtml(s) {
    EVENTS
    =========================== */
 
-/* ═══════════════════════════════════════════════
-   EVENTS — cards display + create with 5 images
-   ═══════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   EVENTS â€” cards display + create with 5 images
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const EVENTS_STORAGE = 'event-images';
 
 async function loadEventsCards(page = 0, searchTerm = '') {
-    console.log('📅 [EVENTS] Loading events cards...');
+    console.log('ðŸ“… [EVENTS] Loading events cards...');
     let container = document.getElementById('eventsCardsContainer');
     if (!container) {
         const panel = document.getElementById('eventsPanel');
@@ -3590,10 +3595,10 @@ async function loadEventsCards(page = 0, searchTerm = '') {
             const eDate   = ev.end_date;
             const dateStr = sDate
                 ? (eDate && eDate !== sDate
-                    ? new Date(sDate+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' – ' + new Date(eDate+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+                    ? new Date(sDate+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' â€“ ' + new Date(eDate+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
                     : new Date(sDate+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}))
-                : '—';
-            const locLine = [ev.location_label, ev.landmark].filter(Boolean).join(' · ');
+                : 'â€”';
+            const locLine = [ev.location_label, ev.landmark].filter(Boolean).join(' Â· ');
             const card = document.createElement('div');
             card.style.cssText = 'background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);transition:transform 0.2s,box-shadow 0.2s;cursor:pointer;';
             card.onmouseenter = () => { card.style.transform='translateY(-4px)'; card.style.boxShadow='0 12px 32px rgba(0,0,0,0.14)'; };
@@ -3629,7 +3634,7 @@ async function loadEventsCards(page = 0, searchTerm = '') {
     }
 }
 
-/* ── Build event create modal completely in JS (no HTML dependency) ── */
+/* â”€â”€ Build event create modal completely in JS (no HTML dependency) â”€â”€ */
 async function openCreateEventModal() {
     let modal = document.getElementById('_createEventModal');
     if (!modal) {
@@ -3781,12 +3786,12 @@ async function deleteEvent(eventId) {
 window.deleteEvent = deleteEvent;
 
 
-/* ═══════════════════════════════════════════════════
-   PROMOTIONS — card display (no promo code, listing required)
-   ═══════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   PROMOTIONS â€” card display (no promo code, listing required)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function loadPromotionsCards(page = 0, searchTerm = '') {
     if (CURRENT_ROLE !== 'admin') return; // owner has its own promotions view (loadOwnerPromotions)
-    console.log('🏷️ [PROMOS] Loading promotion cards...');
+    console.log('ðŸ·ï¸ [PROMOS] Loading promotion cards...');
     let container = document.getElementById('promosCardsContainer');
     if (!container) {
         const panel = document.getElementById('promotionsPanel');
@@ -3866,9 +3871,9 @@ async function loadPromotionsCards(page = 0, searchTerm = '') {
                 '<div style="position:absolute;top:10px;right:10px;background:' + (isActive ? 'rgba(46,204,113,0.9)' : 'rgba(150,150,150,0.9)') + ';color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">' + (isActive ? 'ACTIVE' : 'INACTIVE') + '</div></div>' +
                 '<div style="padding:16px;">' +
                 '<h4 style="font-size:15px;font-weight:700;color:#1a1a1a;margin:0 0 4px;">' + escapeHtml(p.title || '') + '</h4>' +
-                '<p style="font-size:12px;color:#EB6753;margin:0 0 6px;font-weight:600;"><i class="fa-solid fa-house"></i> ' + escapeHtml(lstMap[p.listing_id] || '—') + '</p>' +
+                '<p style="font-size:12px;color:#EB6753;margin:0 0 6px;font-weight:600;"><i class="fa-solid fa-house"></i> ' + escapeHtml(lstMap[p.listing_id] || 'â€”') + '</p>' +
                 (p.description ? '<p style="font-size:12px;color:#888;margin:0 0 10px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' + escapeHtml(p.description) + '</p>' : '') +
-                '<p style="font-size:11px;color:#aaa;margin:0;"><i class="fa-regular fa-calendar"></i> ' + (p.start_date||'') + ' → ' + (p.end_date||'') + '</p>' +
+                '<p style="font-size:11px;color:#aaa;margin:0;"><i class="fa-regular fa-calendar"></i> ' + (p.start_date||'') + ' â†’ ' + (p.end_date||'') + '</p>' +
                 '<p style="font-size:11px;color:#bbb;margin:4px 0 0;"><i class="fa-solid fa-pencil"></i> Click to edit</p></div>';
             container.appendChild(card);
         });
@@ -3958,7 +3963,7 @@ async function savePromoEdit(promoId) {
 }
 window.savePromoEdit = savePromoEdit;
 
-/* ── Self-building promotion create modal (no HTML dependency) ── */
+/* â”€â”€ Self-building promotion create modal (no HTML dependency) â”€â”€ */
 async function openCreatePromoModal() {
     let modal = document.getElementById('_createPromoModal');
     if (!modal) {
@@ -3973,7 +3978,7 @@ async function openCreatePromoModal() {
     let listingQuery = _supabase.from('listings').select('id,title').eq('status','approved').order('title');
     if (CURRENT_ROLE === 'owner') listingQuery = listingQuery.eq('owner_id', CURRENT_PROFILE.id);
     const { data: listings } = await listingQuery;
-    const lstOpts = '<option value="">— Select a listing —</option>' +
+    const lstOpts = '<option value="">â€” Select a listing â€”</option>' +
         (listings||[]).map(l => '<option value="' + l.id + '">' + escapeHtml(l.title) + '</option>').join('');
 
     const IS = 'width:100%;padding:11px 14px;border:1.5px solid #ebebeb;border-radius:10px;font-size:14px;outline:none;font-family:Inter,sans-serif;box-sizing:border-box;background:#fff;';
@@ -4119,9 +4124,9 @@ async function handleSaveSettings() {
     }
 }
 
-/* ═══════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    LISTING REQUESTS (admin approves before listing goes live)
-   ═══════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function injectListingRequestsTab() {
     if (document.querySelector('[data-tab="listing-requests"]')) return;
     const sidebar = document.getElementById('sidebar') || document.querySelector('.sidebar-nav') || document.querySelector('nav');
@@ -4159,7 +4164,7 @@ function injectListingRequestsTab() {
 }
 
 async function loadListingRequests(searchTerm = '', page = 0) {
-    console.log('📋 [REQUESTS] Loading pending listing requests...');
+    console.log('ðŸ“‹ [REQUESTS] Loading pending listing requests...');
     let container = document.getElementById('listingRequestsContainer');
     if (!container) {
         const panel = document.getElementById('listing-requestsPanel');
@@ -4242,13 +4247,13 @@ async function loadListingRequests(searchTerm = '', page = 0) {
         clearTimeout(_guard);
         console.log(' [REQUESTS] Loaded', data.length, 'pending listings');
 
-        // ── Pagination ──
+        // â”€â”€ Pagination â”€â”€
         if (window.renderPagination) {
             const pageCount = Math.ceil((count || data.length) / PAGE_SIZE);
             renderPagination('listingRequestsPagination', page, pageCount, count || data.length, PAGE_SIZE, (p) => loadListingRequests(searchTerm, p));
         }
 
-        // ── Also load pending edit requests (always, no pagination — tend to be few) ──
+        // â”€â”€ Also load pending edit requests (always, no pagination â€” tend to be few) â”€â”€
         await loadPendingEditRequests(container, searchTerm);
 
     } catch(err) {
@@ -4296,8 +4301,8 @@ async function loadPendingEditRequests(container, searchTerm = '') {
             row.setAttribute('data-edit-req-id', er.id);
             row.style.cssText = 'background:#fff;border-left:4px solid #f39c12;border-radius:16px;padding:20px 24px;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,0,0,0.07);transition:opacity 0.3s;';
             const changes = [];
-            if (pc.title && pc.title !== listing.title) changes.push(`Title → <em>${escapeHtml(pc.title)}</em>`);
-            if (pc.price && pc.price !== listing.price) changes.push(`Price → <strong>${Number(pc.price).toLocaleString('en-RW')} RWF</strong>`);
+            if (pc.title && pc.title !== listing.title) changes.push(`Title â†’ <em>${escapeHtml(pc.title)}</em>`);
+            if (pc.price && pc.price !== listing.price) changes.push(`Price â†’ <strong>${Number(pc.price).toLocaleString('en-RW')} RWF</strong>`);
             if (pc.description) changes.push('Description updated');
             if (pc.new_images?.length) changes.push(`${pc.new_images.length} new image(s)`);
             if (pc.remove_image_ids?.length) changes.push(`${pc.remove_image_ids.length} image(s) removed`);
@@ -4310,8 +4315,8 @@ async function loadPendingEditRequests(container, searchTerm = '') {
                 '<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">EDIT REQUEST</span>' +
                 '<h4 style="font-size:15px;font-weight:700;color:#1a1a1a;margin:0;">' + escapeHtml(pc.title||listing.title||'Unknown') + '</h4>' +
                 '</div>' +
-                '<p style="font-size:12px;color:#888;margin:0 0 6px;"><i class="fa-solid fa-user" style="color:#EB6753;font-size:10px;"></i> ' + escapeHtml(owner.full_name||'Unknown') + ' · ' + escapeHtml(owner.email||'') + '</p>' +
-                (changes.length ? '<p style="font-size:12px;color:#555;margin:0;">Changes: ' + changes.join(' · ') + '</p>' : '') +
+                '<p style="font-size:12px;color:#888;margin:0 0 6px;"><i class="fa-solid fa-user" style="color:#EB6753;font-size:10px;"></i> ' + escapeHtml(owner.full_name||'Unknown') + ' Â· ' + escapeHtml(owner.email||'') + '</p>' +
+                (changes.length ? '<p style="font-size:12px;color:#555;margin:0;">Changes: ' + changes.join(' Â· ') + '</p>' : '') +
                 '</div>' +
                 '<div style="display:flex;gap:8px;flex-shrink:0;align-items:center;">' +
                 '<button onclick="openApproveEditDialog(\'' + er.id + '\',\'' + er.listing_id + '\',\'' + Number(listing.price_afristay_fee||0) + '\')" style="background:#e8f8f0;color:#27ae60;border:1px solid #b8e6ce;padding:9px 18px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-check"></i> Approve</button>' +
@@ -4468,7 +4473,7 @@ async function confirmApproveWithFee(listingId, ownerPrice) {
             price_display: priceDisplay,
         }).eq('id', listingId);
         if (error) throw error;
-        toast('Listing approved — fee set to ' + fee.toLocaleString('en-RW') + ' RWF!', 'success');
+        toast('Listing approved â€” fee set to ' + fee.toLocaleString('en-RW') + ' RWF!', 'success');
         bustListingCache();
         const row = document.querySelector('[data-req-id="' + listingId + '"]');
         if (row) { row.style.opacity = '0'; row.style.transition = 'opacity 0.3s'; setTimeout(() => row.remove(), 320); }
@@ -4481,7 +4486,7 @@ async function confirmApproveWithFee(listingId, ownerPrice) {
 window.confirmApproveWithFee = confirmApproveWithFee;
 
 async function approveListingRequest(listingId, btn) {
-    // Legacy — now goes through openApprovalFeeDialog
+    // Legacy â€” now goes through openApprovalFeeDialog
     openApprovalFeeDialog(listingId, 0);
 }
 window.approveListingRequest = approveListingRequest;
@@ -4489,7 +4494,7 @@ window.approveListingRequest = approveListingRequest;
 async function loadOwnerApplications(page = 0) {
     const container = document.getElementById('ownerApplicationsContainer');
     if (!container) return;
-    container.innerHTML = '<div style="padding:20px;color:#aaa;font-size:13px;">Loading…</div>';
+    container.innerHTML = '<div style="padding:20px;color:#aaa;font-size:13px;">Loadingâ€¦</div>';
     const PAGE_SIZE = 15;
     const start = page * PAGE_SIZE, end = start + PAGE_SIZE - 1;
     try {
@@ -4518,15 +4523,15 @@ async function loadOwnerApplications(page = 0) {
             const profile = app.profiles || {};
             const statusColors    = { pending: '#fff8e1', approved: '#e8f8f0', rejected: '#fdecea' };
             const statusTextColors = { pending: '#7c5c00', approved: '#1b7a3e', rejected: '#c0392b' };
-            const appPhone   = app.phone    || '—';
-            const profPhone  = profile.phone || '—';
-            const displayPhone = appPhone !== '—' ? appPhone : profPhone;
+            const appPhone   = app.phone    || 'â€”';
+            const profPhone  = profile.phone || 'â€”';
+            const displayPhone = appPhone !== 'â€”' ? appPhone : profPhone;
 
             const answersHtml = (app.answers && typeof app.answers === 'object')
                 ? Object.entries(app.answers).map(([k, v]) =>
                     `<div style="display:flex;gap:6px;align-items:baseline;margin:3px 0;">
                         <span style="font-size:11px;font-weight:700;color:#888;min-width:130px;flex-shrink:0;">${escapeHtml(answerLabels[k] || k)}:</span>
-                        <span style="font-size:12px;color:#333;">${escapeHtml(String(v || '—'))}</span>
+                        <span style="font-size:12px;color:#333;">${escapeHtml(String(v || 'â€”'))}</span>
                     </div>`
                   ).join('')
                 : '';
@@ -4547,7 +4552,7 @@ async function loadOwnerApplications(page = 0) {
                             <div style="width:40px;height:40px;border-radius:50%;background:#EB6753;color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${escapeHtml((profile.full_name || '?').charAt(0).toUpperCase())}</div>
                             <div>
                                 <p style="font-weight:700;color:#1a1a1a;margin:0;font-size:15px;">${escapeHtml(profile.full_name || 'Unknown')}</p>
-                                <p style="color:#888;font-size:12px;margin:0;">${escapeHtml(profile.email || '—')}</p>
+                                <p style="color:#888;font-size:12px;margin:0;">${escapeHtml(profile.email || 'â€”')}</p>
                             </div>
                         </div>
                         <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">
@@ -4578,12 +4583,12 @@ async function loadOwnerApplications(page = 0) {
 }
 window.loadOwnerApplications = loadOwnerApplications;
 
-/* ═══════════════════════════════════════════════════════════════
-   INVITE OWNER — Admin email tool (Resend API via edge function)
-   ═══════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   INVITE OWNER â€” Admin email tool (Resend API via edge function)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 const DEV_EMAIL = 'dev@afristay.rw';
-// Display names for send-as addresses — add new entries here and they appear in the dropdown automatically
+// Display names for send-as addresses â€” add new entries here and they appear in the dropdown automatically
 const SEND_AS_ALIASES = {
     'aminakeza@afristay.rw':       'Amina Keza',
     'emmanuel.butera@afristay.rw': 'Emmanuel Butera',
@@ -4635,7 +4640,7 @@ function updateBusinessSuggestions() {
 }
 window.updateBusinessSuggestions = updateBusinessSuggestions;
 
-// Pre-fill sender info when tab loads — restore title + phone from localStorage
+// Pre-fill sender info when tab loads â€” restore title + phone from localStorage
 function initInviteOwnerTab() {
     const preview = document.getElementById('senderEmailPreview');
     if (preview && CURRENT_PROFILE?.email) preview.textContent = CURRENT_PROFILE.email;
@@ -4659,7 +4664,7 @@ function initInviteOwnerTab() {
     [['sendAsEmailInvite', myEmail], ['sendAsEmailCustom', myEmail]].forEach(([selectId, me]) => {
         const sel = document.getElementById(selectId);
         if (!sel) return;
-        sel.innerHTML = `<option value="">— Use my account (${me || 'me'}) —</option>` + aliasOptions;
+        sel.innerHTML = `<option value="">â€” Use my account (${me || 'me'}) â€”</option>` + aliasOptions;
     });
 }
 window.initInviteOwnerTab = initInviteOwnerTab;
@@ -4684,11 +4689,11 @@ async function sendOwnerInvite() {
     if (senderTitle) localStorage.setItem('afristay_sender_title', senderTitle);
     if (senderPhone) localStorage.setItem('afristay_sender_phone', senderPhone);
 
-    // Generate a unique token per invite — makes every link URL different so
+    // Generate a unique token per invite â€” makes every link URL different so
     // it never appears as a browser autocomplete suggestion
     const inviteToken = crypto.randomUUID();
 
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sendingâ€¦'; }
     if (statusEl) statusEl.innerHTML = '';
 
     try {
@@ -4720,7 +4725,7 @@ async function sendOwnerInvite() {
 
         if (statusEl) statusEl.innerHTML = '<p style="color:#27ae60;font-size:13px;font-weight:600;"><i class="fa-solid fa-circle-check" style="margin-right:6px;"></i>Invite sent to ' + email + '!</p>';
         toast('Invite sent to ' + email + '!', 'success');
-        // Clear invitee fields only — keep sender title since it's the same admin
+        // Clear invitee fields only â€” keep sender title since it's the same admin
         ['inviteeName','inviteeEmail','inviteeBusiness'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         document.getElementById('inviteeCategory').value = '';
         document.getElementById('businessSuggestionChips').innerHTML = '';
@@ -4754,7 +4759,7 @@ async function sendCustomEmail() {
     const oversized = files.find(f => f.size > 10 * 1024 * 1024);
     if (oversized) { if (statusEl) statusEl.innerHTML = '<p style="color:#e74c3c;font-size:13px;">"' + escapeHtml(oversized.name) + '" exceeds 10 MB limit.</p>'; return; }
 
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sendingâ€¦'; }
     if (statusEl) statusEl.innerHTML = '';
 
     try {
@@ -4867,7 +4872,7 @@ async function loadAttentionItems() {
     const container = document.getElementById('attentionContainer');
     const badge     = document.getElementById('attentionBadge');
     if (!container) return;
-    container.innerHTML = '<div style="padding:20px;color:#aaa;font-size:13px;">Loading…</div>';
+    container.innerHTML = '<div style="padding:20px;color:#aaa;font-size:13px;">Loadingâ€¦</div>';
 
     const fmtTs    = ts => new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const roleLabel = r => r === 'admin' ? 'Admin' : r === 'owner' ? 'Owner' : 'User';
@@ -4887,7 +4892,7 @@ async function loadAttentionItems() {
                 action: '<button onclick="document.querySelector(\'[data-tab=owner-applications]\')?.click();loadOwnerApplications()" style="background:#eff6ff;color:#3b82f6;border:1px solid #bfdbfe;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;">Review</button>' });
         });
 
-        // 2) Owners with no phone — two separate queries to avoid PostgREST .or() parsing issues
+        // 2) Owners with no phone â€” two separate queries to avoid PostgREST .or() parsing issues
         const [{ data: nullPhone }, { data: emptyPhone }] = await Promise.all([
             _supabase.from('profiles').select('id, full_name, email').eq('role', 'owner').is('phone', null),
             _supabase.from('profiles').select('id, full_name, email').eq('role', 'owner').eq('phone', ''),
@@ -4912,7 +4917,7 @@ async function loadAttentionItems() {
                 action: '<button onclick="document.querySelector(\'[data-tab=listing-requests]\')?.click();loadListingRequests()" style="background:#f5f3ff;color:#8b5cf6;border:1px solid #ddd6fe;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;">Review</button>' });
         }
 
-        // 4) User-reported errors (last 48h) — split by handled
+        // 4) User-reported errors (last 48h) â€” split by handled
         const since48h = new Date(Date.now() - 172800000).toISOString();
         const { data: userErrors } = await _supabase
             .from('error_reports')
@@ -4937,7 +4942,7 @@ async function loadAttentionItems() {
             e.handled_at ? handled.push(item) : open.push(item);
         });
 
-        // 5) Admin-action audit errors (last 48h) — split by handled
+        // 5) Admin-action audit errors (last 48h) â€” split by handled
         const { data: errorLogs } = await _supabase
             .from('audit_logs')
             .select('id, created_at, action, entity_type, description, actor_role, handled_at')
@@ -4954,7 +4959,7 @@ async function loadAttentionItems() {
                 label: 'Admin Error',
                 text: '<strong style="color:#b45309;">[Admin Error] ' + escapeHtml(label) + '</strong>'
                     + (log.description ? '<br><span style="font-size:12px;color:#666;">' + escapeHtml(log.description.slice(0,220)) + '</span>' : '')
-                    + '<br><span style="font-size:11px;color:#aaa;">' + fmtTs(log.created_at) + (log.actor_role ? ' · ' + escapeHtml(log.actor_role) : '') + '</span>',
+                    + '<br><span style="font-size:11px;color:#aaa;">' + fmtTs(log.created_at) + (log.actor_role ? ' Â· ' + escapeHtml(log.actor_role) : '') + '</span>',
                 plainText: '[Admin Error] ' + label + (log.description ? ': ' + log.description : ''),
                 ts: log.created_at,
                 isError: true,
@@ -4968,7 +4973,7 @@ async function loadAttentionItems() {
         if (badge) { badge.textContent = open.length; badge.style.display = open.length ? '' : 'none'; }
 
         if (!open.length && !handled.length) {
-            container.innerHTML = '<div style="padding:40px;text-align:center;color:#aaa;font-size:14px;"><i class="fa-solid fa-circle-check" style="font-size:32px;color:#27ae60;display:block;margin-bottom:12px;"></i>All clear — nothing needs your attention right now.</div>';
+            container.innerHTML = '<div style="padding:40px;text-align:center;color:#aaa;font-size:14px;"><i class="fa-solid fa-circle-check" style="font-size:32px;color:#27ae60;display:block;margin-bottom:12px;"></i>All clear â€” nothing needs your attention right now.</div>';
             return;
         }
 
@@ -5049,7 +5054,7 @@ window.exportAttention = function(format) {
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         const W = doc.internal.pageSize.width;
         doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-        doc.text('AfriStay — Attention Report', W / 2, 18, { align: 'center' });
+        doc.text('AfriStay â€” Attention Report', W / 2, 18, { align: 'center' });
         doc.setFontSize(10); doc.setFont('helvetica', 'normal');
         doc.text('Generated: ' + new Date().toLocaleString(), W / 2, 25, { align: 'center' });
         if (typeof doc.autoTable === 'function') {
@@ -5072,10 +5077,10 @@ window.exportAttention = function(format) {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SITE HEALTH GRAPH
    Renders a Chart.js line graph of error_reports per day (30 days)
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 let _siteHealthChart = null;
 async function loadSiteHealthGraph() {
     const canvas  = document.getElementById('siteHealthChart');
@@ -5160,7 +5165,7 @@ async function loadSiteHealthGraph() {
             ).join('') +
             (topPages.length ? `<div style="background:#f9f9f9;border-radius:10px;padding:10px 16px;min-width:160px;">
                 <div style="font-size:11px;color:#aaa;font-weight:700;margin-bottom:6px;">TOP ERROR PAGES</div>
-                ${topPages.map(([pg, ct]) => `<div style="font-size:12px;color:#555;margin:2px 0;"><strong>${ct}×</strong> ${escapeHtml(pg)}</div>`).join('')}
+                ${topPages.map(([pg, ct]) => `<div style="font-size:12px;color:#555;margin:2px 0;"><strong>${ct}Ã—</strong> ${escapeHtml(pg)}</div>`).join('')}
             </div>` : '');
         }
     } catch(err) {
@@ -5193,13 +5198,13 @@ async function rejectListingRequest(listingId, btn) {
 }
 window.rejectListingRequest = rejectListingRequest;
 
-/* ═══════════════════════════════════════════════════
-   NEW BOOKINGS — pending/awaiting_approval only
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   NEW BOOKINGS â€” pending/awaiting_approval only
    Owner: own listings, info only (no approve/reject)
    Admin: all listings, with approve/reject actions
-   ═══════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function loadNewBookings(page = 0) {
-    console.log('🆕 [NEW BOOKINGS] Loading pending bookings...');
+    console.log('ðŸ†• [NEW BOOKINGS] Loading pending bookings...');
     const isAdmin = CURRENT_ROLE === 'admin';
     const PAGE_SIZE = 15;
     const start = page * PAGE_SIZE, end = start + PAGE_SIZE - 1;
@@ -5272,7 +5277,7 @@ async function loadNewBookings(page = 0) {
             row.innerHTML =
                 '<div style="flex:1;min-width:160px;">' +
                 '<p style="font-size:14px;font-weight:700;color:#1a1a1a;margin:0 0 3px;">' + escapeHtml(lstM[b.listing_id]||'Unknown listing') + '</p>' +
-                '<p style="font-size:12px;color:#888;margin:0;"><i class="fa-regular fa-calendar" style="color:#EB6753;"></i> ' + (b.start_date||'') + ' → ' + (b.end_date||'') + ' (' + nights + ')</p>' +
+                '<p style="font-size:12px;color:#888;margin:0;"><i class="fa-regular fa-calendar" style="color:#EB6753;"></i> ' + (b.start_date||'') + ' â†’ ' + (b.end_date||'') + ' (' + nights + ')</p>' +
                 '<p style="font-size:11px;color:#bbb;margin:4px 0 0;"><i class="fa-solid fa-credit-card" style="margin-right:4px;"></i>' + escapeHtml(pmLabel) + '</p>' +
                 '</div>' +
                 '<div style="min-width:160px;">' +
@@ -5308,12 +5313,12 @@ window.handleCreatePromo = handleCreatePromo;
 window.handleSaveSettings = handleSaveSettings;
 
 
-/* ═══════════════════════════════════════════════════
-   DASHBOARD PANEL — "New Listings" pending-approval widget
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   DASHBOARD PANEL â€” "New Listings" pending-approval widget
    Replaces old "Recent Bookings" section.
-   Admin  → sees ALL pending listings with approve/reject
-   Owner  → sees THEIR pending listings (status-only view)
-   ═══════════════════════════════════════════════════ */
+   Admin  â†’ sees ALL pending listings with approve/reject
+   Owner  â†’ sees THEIR pending listings (status-only view)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function loadDashPendingListings() {
     // Find or create the container inside dashboardPanel
     let el = document.getElementById('dashPendingListings');
@@ -5400,7 +5405,7 @@ async function loadDashPendingListings() {
             row.id = 'dplRow_' + l.id;
             row.style.cssText = 'display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #f5f5f5;align-items:center;flex-wrap:wrap;transition:opacity 0.3s;';
             row.innerHTML =
-                // Thumbnail → links to preview
+                // Thumbnail â†’ links to preview
                 '<a href="/Listings/Detail/?id=' + l.id + '&preview=1" target="_blank" style="flex-shrink:0;width:76px;height:62px;border-radius:12px;overflow:hidden;background:#f0f0f0;display:flex;align-items:center;justify-content:center;text-decoration:none;">' +
                 (img ? '<img src="' + escapeHtml(img) + '" style="width:100%;height:100%;object-fit:cover;">' : '<i class="fa-solid fa-image" style="color:#ddd;font-size:20px;"></i>') +
                 '</a>' +
@@ -5410,7 +5415,7 @@ async function loadDashPendingListings() {
                 '<p style="margin:0 0 2px;font-size:14px;font-weight:700;color:#1a1a1a;line-height:1.3;">' + escapeHtml(l.title) + '</p></a>' +
                 '<p style="margin:0;font-size:12px;color:#aaa;"><i class="fa-solid fa-location-dot" style="color:#EB6753;font-size:10px;"></i> ' + escapeHtml(loc) + '</p>' +
                 (CURRENT_ROLE === 'admin' && owner.full_name
-                    ? '<p style="margin:2px 0 0;font-size:12px;color:#888;"><i class="fa-solid fa-user" style="color:#EB6753;font-size:10px;"></i> ' + escapeHtml(owner.full_name) + ' · ' + escapeHtml(owner.email||'') + '</p>'
+                    ? '<p style="margin:2px 0 0;font-size:12px;color:#888;"><i class="fa-solid fa-user" style="color:#EB6753;font-size:10px;"></i> ' + escapeHtml(owner.full_name) + ' Â· ' + escapeHtml(owner.email||'') + '</p>'
                     : '') +
                 '</div>' +
                 // Price
@@ -5421,7 +5426,7 @@ async function loadDashPendingListings() {
                 (CURRENT_ROLE === 'admin'
                     ? '<button onclick="dashApprove(\'' + l.id + '\',this)" style="background:#e8f8f0;color:#27ae60;border:1px solid #b8e6ce;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;transition:opacity 0.2s;"><i class="fa-solid fa-check"></i> Approve</button>' +
                       '<button onclick="dashReject(\'' + l.id + '\',this)" style="background:#fde8e8;color:#e74c3c;border:1px solid #f5c6c6;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;transition:opacity 0.2s;"><i class="fa-solid fa-xmark"></i> Reject</button>'
-                    : '<span style="background:#fff3cd;color:#856404;border:1px solid #ffd047;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;">⏳ Pending Review</span>'
+                    : '<span style="background:#fff3cd;color:#856404;border:1px solid #ffd047;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;">â³ Pending Review</span>'
                 ) +
                 '</div>';
             el.appendChild(row);
@@ -5441,7 +5446,7 @@ async function dashApprove(id, btn) {
     try {
         const { error } = await _supabase.from('listings').update({ status: 'approved' }).eq('id', id);
         if (error) throw error;
-        toast(' Listing approved — now live!', 'success');
+        toast(' Listing approved â€” now live!', 'success');
         bustListingCache();
         const row = document.getElementById('dplRow_' + id);
         if (row) { row.style.opacity = '0'; setTimeout(() => row.remove(), 320); }
@@ -5490,11 +5495,11 @@ window.filterTable = filterTable;
 window.togglePanels = togglePanels;
 
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    URL ACTION HANDLER
    Email links contain ?action=approve&booking=ID
    Opens dashboard and auto-triggers the action
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function handleUrlActions() {
     const params = new URLSearchParams(window.location.search);
     const action    = params.get('action');
@@ -5519,9 +5524,9 @@ async function handleUrlActions() {
     }
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    ARCHIVE / TRASH TAB  (admin only)
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 let _archiveFilter = 'all';
 let _archivePage   = 0;
 const _ARCHIVE_PAGE_SIZE = 20;
@@ -5568,13 +5573,13 @@ async function loadArchiveTab(page = 0) {
             let title = '', sub = '';
             if (r.entity_type === 'user') {
                 title = d.full_name || 'Unknown User';
-                sub   = [d.email, d.phone, 'Role: ' + (d.role || '—')].filter(Boolean).join(' · ');
+                sub   = [d.email, d.phone, 'Role: ' + (d.role || 'â€”')].filter(Boolean).join(' Â· ');
             } else if (r.entity_type === 'booking') {
                 title = 'Booking #' + (d.booking_reference || r.entity_id.slice(0,8));
-                sub   = ['Guest: ' + (d.guest_name || d.user_id || '—'), 'Status: ' + (d.status || r.reason || '—'), d.start_date ? d.start_date + ' → ' + d.end_date : ''].filter(Boolean).join(' · ');
+                sub   = ['Guest: ' + (d.guest_name || d.user_id || 'â€”'), 'Status: ' + (d.status || r.reason || 'â€”'), d.start_date ? d.start_date + ' â†’ ' + d.end_date : ''].filter(Boolean).join(' Â· ');
             } else {
                 title = d.title || 'Listing #' + r.entity_id.slice(0,8);
-                sub   = ['By: ' + (r.deleted_by_name || '—'), 'Reason: ' + (r.reason || '—'), d.province_id ? 'Province ID ' + d.province_id : ''].filter(Boolean).join(' · ');
+                sub   = ['By: ' + (r.deleted_by_name || 'â€”'), 'Reason: ' + (r.reason || 'â€”'), d.province_id ? 'Province ID ' + d.province_id : ''].filter(Boolean).join(' Â· ');
             }
 
             return '<div class="archive-row">' +
@@ -5629,10 +5634,10 @@ function escHtml(s) {
 // Run after page init
 setTimeout(handleUrlActions, 3500); // give auth session time to restore
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    OWNER WALLET SETTINGS
    Owners set their MoMo/bank details for receiving payouts
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function loadOwnerWallet() {
     if (CURRENT_ROLE !== 'owner') return;
     console.log('[WALLET] Loading owner wallet...');
@@ -5680,7 +5685,7 @@ async function loadOwnerWallet() {
             <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:11px;padding:12px 16px;
                         font-size:13px;color:#166534;margin-bottom:18px;display:flex;align-items:center;gap:10px;">
                 <i class="fa-solid fa-circle-check"></i>
-                <span>Wallet active — payouts go to <strong>${wallet.momo_phone ? maskPhone(wallet.momo_phone) : wallet.bank_name}</strong></span>
+                <span>Wallet active â€” payouts go to <strong>${wallet.momo_phone ? maskPhone(wallet.momo_phone) : wallet.bank_name}</strong></span>
             </div>`}
 
             <div style="margin-bottom:16px;">
@@ -5698,7 +5703,7 @@ async function loadOwnerWallet() {
                     <label style="font-size:11px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:6px;">MoMo Phone Number</label>
                     <div style="position:relative;display:flex;">
                         <span style="position:absolute;left:0;top:0;bottom:0;display:flex;align-items:center;padding:0 12px;font-size:14px;font-weight:700;border-right:1.5px solid #e8e8e8;pointer-events:none;gap:5px;z-index:1;">
-                            🇷🇼 +250
+                            ðŸ‡·ðŸ‡¼ +250
                         </span>
                         <input id="walletPhone" type="tel" value="${phone.replace(/^250/,'')}" placeholder="78X XXX XXX"
                                maxlength="9" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')"
@@ -5764,7 +5769,7 @@ async function saveOwnerWallet() {
         toast('Please fill in all bank details.', 'error'); return;
     }
 
-    console.log('[WALLET] Saving wallet — method:', method);
+    console.log('[WALLET] Saving wallet â€” method:', method);
     try {
         const payload = {
             owner_id:       CURRENT_PROFILE.id,
@@ -5800,9 +5805,9 @@ window.saveOwnerWallet    = saveOwnerWallet;
 window.loadOwnerWallet    = loadOwnerWallet;
 window.handleUrlActions   = handleUrlActions;
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    EARNINGS TAB (owner)
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function loadEarnings() {
     // Wait up to 3s for auth to complete before giving up
     if (!CURRENT_PROFILE) {
@@ -5817,7 +5822,7 @@ async function loadEarnings() {
         return;
     }
     const _set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    _set('earningsBalance', '…'); _set('earningsPaid', '…'); _set('earningsBookings', '…');
+    _set('earningsBalance', 'â€¦'); _set('earningsPaid', 'â€¦'); _set('earningsBookings', 'â€¦');
 
     try {
         const [bkRes, payRes] = await Promise.all([
@@ -5852,9 +5857,9 @@ async function loadEarnings() {
 }
 window.loadEarnings = loadEarnings;
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PAYOUT HISTORY (for owners + admin)
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function loadPayoutHistory(page = 0) {
     if (CURRENT_ROLE !== 'owner' && CURRENT_ROLE !== 'admin') return;
 
@@ -5902,7 +5907,7 @@ async function loadPayoutHistory(page = 0) {
                     </span>
                 </p>
                 <p style="margin:2px 0 0;font-size:12px;color:#aaa;">
-                    ${p.payout_method?.replace(/_/g,' ') || '—'} · ${p.payout_phone || '—'} · ${fmtDate(p.initiated_at)}
+                    ${p.payout_method?.replace(/_/g,' ') || 'â€”'} Â· ${p.payout_phone || 'â€”'} Â· ${fmtDate(p.initiated_at)}
                 </p>
                 ${p.failure_reason ? `<p style="margin:2px 0 0;font-size:11px;color:#e74c3c;">${p.failure_reason}</p>` : ''}
             </div>
@@ -5921,9 +5926,9 @@ async function loadPayoutHistory(page = 0) {
 
 window.loadPayoutHistory = loadPayoutHistory;
 
-/* ═══════════════════════════════════════════════════════════════
-   ADMIN — RECEIPT SEARCH
-   ═══════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   ADMIN â€” RECEIPT SEARCH
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 window.loadReceiptsSearch = async function(page = 0) {
     if (CURRENT_ROLE !== 'admin') return;
 
@@ -5932,7 +5937,7 @@ window.loadReceiptsSearch = async function(page = 0) {
     if (!tbody) return;
 
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:28px;color:#aaa;">
-        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:18px;margin-bottom:8px;display:block;"></i>Loading…</td></tr>`;
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:18px;margin-bottom:8px;display:block;"></i>Loadingâ€¦</td></tr>`;
 
     const search   = (document.getElementById('rcptSearch')?.value  || '').trim().toLowerCase();
     const dateFrom = document.getElementById('rcptDateFrom')?.value || '';
@@ -5945,7 +5950,7 @@ window.loadReceiptsSearch = async function(page = 0) {
         const PAGE_SIZE = 50;
         const start     = page * PAGE_SIZE;
 
-        // Query bookings (source of truth) — all paid bookings have receipts whether
+        // Query bookings (source of truth) â€” all paid bookings have receipts whether
         // stored in digital_receipts or generated on-the-fly.
         // Join digital_receipts for stored data + cancellation info.
         let query = _supabase
@@ -6011,7 +6016,7 @@ window.loadReceiptsSearch = async function(page = 0) {
             return;
         }
 
-        const fmt   = d => d ? new Date(d.includes('T') ? d : d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+        const fmt   = d => d ? new Date(d.includes('T') ? d : d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : 'â€”';
         const money = (n, cur) => Number(n || 0).toLocaleString('en-RW') + ' ' + (cur || 'RWF');
 
         tbody.innerHTML = results.map(r => {
@@ -6024,13 +6029,13 @@ window.loadReceiptsSearch = async function(page = 0) {
                 : '';
             return `<tr>
                 <td><span style="font-family:monospace;font-size:12px;color:#EB6753;font-weight:700;">${escapeHtml(r.receipt_number)}</span></td>
-                <td style="font-family:monospace;font-size:12px;">${escapeHtml(r.booking_reference || '—')}</td>
+                <td style="font-family:monospace;font-size:12px;">${escapeHtml(r.booking_reference || 'â€”')}</td>
                 <td>
-                    <div style="font-weight:600;font-size:13px;">${escapeHtml(r.guest_name || '—')}</div>
+                    <div style="font-weight:600;font-size:13px;">${escapeHtml(r.guest_name || 'â€”')}</div>
                     <div style="font-size:11px;color:#aaa;">${escapeHtml(r.guest_email || '')}</div>
                 </td>
                 <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                    title="${escapeHtml(r.listing_title || '')}">${escapeHtml(r.listing_title || '—')}</td>
+                    title="${escapeHtml(r.listing_title || '')}">${escapeHtml(r.listing_title || 'â€”')}</td>
                 <td style="white-space:nowrap;font-size:13px;">${fmt(r.issued_at)}</td>
                 <td style="font-weight:700;white-space:nowrap;">${money(r.total_amount, r.currency)}</td>
                 <td>${badge}${cancelNote}</td>
@@ -6067,11 +6072,11 @@ window.loadReceiptsSearch = async function(page = 0) {
     }
 };
 
-/* ── Download ALL confirmed receipts as a ZIP of HTML files ── */
+/* â”€â”€ Download ALL confirmed receipts as a ZIP of HTML files â”€â”€ */
 window.downloadAllReceiptsZip = async function() {
     if (CURRENT_ROLE !== 'admin') return;
     const btn = document.getElementById('dlZipBtn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Generating…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Generatingâ€¦'; }
 
     try {
         const { data: bookings, error } = await _supabase
@@ -6113,12 +6118,12 @@ window.downloadAllReceiptsZip = async function() {
   .footer{margin-top:28px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:14px}
 </style></head><body>
 <div class="logo">AfriStay</div>
-<div class="sub">Official Payment Receipt &nbsp;·&nbsp; Generated ${today}</div>
+<div class="sub">Official Payment Receipt &nbsp;Â·&nbsp; Generated ${today}</div>
 <h2>Receipt ${ref}</h2>
 <table>
   <tr><td>Booking Ref</td><td>${b.booking_reference || ref}</td></tr>
-  <tr><td>Guest Name</td><td>${escapeHtml(b.guest_name||'—')}</td></tr>
-  <tr><td>Guest Email</td><td>${escapeHtml(b.guest_email||'—')}</td></tr>
+  <tr><td>Guest Name</td><td>${escapeHtml(b.guest_name||'â€”')}</td></tr>
+  <tr><td>Guest Email</td><td>${escapeHtml(b.guest_email||'â€”')}</td></tr>
   <tr><td>Property</td><td>${escapeHtml(b.listings?.title||'AfriStay Listing')}</td></tr>
   <tr><td>${isVeh?'Pick-up':'Check-in'}</td><td>${fmtDate(b.start_date)}</td></tr>
   <tr><td>${isVeh?'Return':'Check-out'}</td><td>${fmtDate(b.end_date)}</td></tr>
@@ -6128,7 +6133,7 @@ window.downloadAllReceiptsZip = async function() {
 <table class="total">
   <tr><td>Total Paid</td><td>${fmtAmt(b.total_amount, b.currency)}</td></tr>
 </table>
-<div class="footer">AfriStay &nbsp;·&nbsp; Rwanda's Premier Rental Platform &nbsp;·&nbsp; afristay.rw &nbsp;·&nbsp; info@afristay.rw</div>
+<div class="footer">AfriStay &nbsp;Â·&nbsp; Rwanda's Premier Rental Platform &nbsp;Â·&nbsp; afristay.rw &nbsp;Â·&nbsp; info@afristay.rw</div>
 </body></html>`;
             zip.file(`receipt-${ref}.html`, html);
         }
@@ -6150,10 +6155,10 @@ window.downloadAllReceiptsZip = async function() {
     }
 };
 
-/* ── Open receipt as PDF in a new browser tab ── */
+/* â”€â”€ Open receipt as PDF in a new browser tab â”€â”€ */
 window.openReceiptPdf = async function(bookingId) {
     // Re-uses downloadReceipt logic but opens in browser instead of downloading
-    toast('Preparing receipt…', 'info');
+    toast('Preparing receiptâ€¦', 'info');
     try {
         // Build receipt data the same way downloadReceipt does
         let receiptData = null;
@@ -6183,12 +6188,12 @@ window.openReceiptPdf = async function(bookingId) {
                 price_per_night: priceNight, subtotal: priceNight * nights,
                 platform_fee: Math.round(totalAmount * 0.05), total_amount: totalAmount,
                 currency: listing?.currency || 'RWF', payment_method: booking.payment_method || 'unknown',
-                guest_name: booking.guest_name || '—', guest_email: booking.guest_email || '—',
-                guest_phone: booking.guest_phone || '—', owner_name: ownerRes.data?.full_name || 'Host',
+                guest_name: booking.guest_name || 'â€”', guest_email: booking.guest_email || 'â€”',
+                guest_phone: booking.guest_phone || 'â€”', owner_name: ownerRes.data?.full_name || 'Host',
                 issued_at: booking.created_at || new Date().toISOString(),
             };
         }
-        // Call downloadReceipt but intercept — simpler: just call downloadReceipt and let user deal with it
+        // Call downloadReceipt but intercept â€” simpler: just call downloadReceipt and let user deal with it
         // Instead, open a data: URL in a new tab
         if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
             await new Promise((res, rej) => {
@@ -6199,9 +6204,9 @@ window.openReceiptPdf = async function(bookingId) {
         }
         // Temporarily override doc.save to capture the blob instead
         const { jsPDF } = window.jspdf || window;
-        // We build a minimal PDF for preview — just delegate to downloadReceipt
+        // We build a minimal PDF for preview â€” just delegate to downloadReceipt
         // but use jsPDF's output('bloburl') to open in tab
-        // Re-use the full build by borrowing it: trick — call downloadReceipt then cancel the download
+        // Re-use the full build by borrowing it: trick â€” call downloadReceipt then cancel the download
         // Better: build inline here using the same pipeline
         await downloadReceipt(bookingId); // fallback: just download
     } catch(err) {
@@ -6213,7 +6218,7 @@ window.openReceiptPdf = async function(bookingId) {
 // Make openReceiptPdf actually open in browser using jsPDF output
 // Override: use jsPDF's blob URL approach
 window.openReceiptPdf = async function(bookingId) {
-    toast('Opening receipt…', 'info');
+    toast('Opening receiptâ€¦', 'info');
     try {
         let receiptData = null;
         const { data: dbReceipt } = await _supabase.from('digital_receipts').select('*').eq('booking_id', bookingId).maybeSingle();
@@ -6241,8 +6246,8 @@ window.openReceiptPdf = async function(bookingId) {
                 price_per_night: priceNight, subtotal: priceNight * nights,
                 platform_fee: Math.round(totalAmount * 0.05), total_amount: totalAmount,
                 currency: listing?.currency || 'RWF', payment_method: booking.payment_method || 'unknown',
-                guest_name: booking.guest_name || '—', guest_email: booking.guest_email || '—',
-                guest_phone: booking.guest_phone || '—', owner_name: ownerRes.data?.full_name || 'Host',
+                guest_name: booking.guest_name || 'â€”', guest_email: booking.guest_email || 'â€”',
+                guest_phone: booking.guest_phone || 'â€”', owner_name: ownerRes.data?.full_name || 'Host',
                 issued_at: booking.created_at || new Date().toISOString(),
             };
         }
@@ -6259,7 +6264,7 @@ window.openReceiptPdf = async function(bookingId) {
         const W = doc.internal.pageSize.width;
         const M = 18;
         let y = 0;
-        const fmt   = d => d ? new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }) : '—';
+        const fmt   = d => d ? new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }) : 'â€”';
         const money = n => Number(n||0).toLocaleString('en-RW') + ' ' + receiptData.currency;
         const pmLabel = String(receiptData.payment_method||'').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
         const isCancelledReceipt = !!receiptData.cancelled_at;
@@ -6318,14 +6323,14 @@ window.openReceiptPdf = async function(bookingId) {
         doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(180,180,180);
         doc.text('GUEST',M+6,y+9); doc.text('HOST',W/2+7,y+9);
         doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(22,22,22);
-        doc.text(receiptData.guest_name||'—',M+6,y+17); doc.text(receiptData.owner_name||'—',W/2+7,y+17);
+        doc.text(receiptData.guest_name||'â€”',M+6,y+17); doc.text(receiptData.owner_name||'â€”',W/2+7,y+17);
         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(130,130,130);
-        doc.text(receiptData.guest_email||'—',M+6,y+24); doc.text(receiptData.guest_phone||'—',M+6,y+30);
+        doc.text(receiptData.guest_email||'â€”',M+6,y+24); doc.text(receiptData.guest_phone||'â€”',M+6,y+30);
         y+=boxH+14;
 
         if (isCancelledReceipt) {
             const cancelFmt = receiptData.cancelled_at ? new Date(receiptData.cancelled_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-            const cancelLine = ['Cancelled by: '+(receiptData.cancelled_by||'Admin'), cancelFmt, receiptData.cancellation_note?'Reason: '+receiptData.cancellation_note:null].filter(Boolean).join('  ·  ');
+            const cancelLine = ['Cancelled by: '+(receiptData.cancelled_by||'Admin'), cancelFmt, receiptData.cancellation_note?'Reason: '+receiptData.cancellation_note:null].filter(Boolean).join('  Â·  ');
             if (y+18 < doc.internal.pageSize.height-22) {
                 doc.setFillColor(254,226,226); doc.roundedRect(M,y,W-M*2,14,3,3,'F');
                 doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(185,28,28);
@@ -6339,7 +6344,7 @@ window.openReceiptPdf = async function(bookingId) {
         doc.setFillColor(248,248,248); doc.rect(0,pageH-18,W,18,'F');
         doc.setDrawColor(235,235,235); doc.line(0,pageH-18,W,pageH-18);
         doc.setTextColor(170,170,170); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
-        doc.text('Official AfriStay receipt · © '+new Date().getFullYear()+' AfriStay Ltd · afristay.rw', W/2, pageH-8, {align:'center'});
+        doc.text('Official AfriStay receipt Â· Â© '+new Date().getFullYear()+' AfriStay Ltd Â· afristay.rw', W/2, pageH-8, {align:'center'});
 
         // Open in browser tab instead of downloading
         const blob = doc.output('blob');
@@ -6349,15 +6354,15 @@ window.openReceiptPdf = async function(bookingId) {
         toast('Receipt opened in new tab.', 'success');
     } catch(err) {
         console.error('[RECEIPT OPEN]', err);
-        toast('Falling back to download…', 'info');
+        toast('Falling back to downloadâ€¦', 'info');
         await downloadReceipt(bookingId);
     }
 };
 
-/* ── Export receipts list as CSV or PDF ── */
+/* â”€â”€ Export receipts list as CSV or PDF â”€â”€ */
 window.exportReceiptsList = async function(format) {
     if (CURRENT_ROLE !== 'admin') return;
-    toast('Preparing export…', 'info');
+    toast('Preparing exportâ€¦', 'info');
 
     try {
         // Fetch all paid bookings with receipt info
@@ -6380,13 +6385,13 @@ window.exportReceiptsList = async function(format) {
             return {
                 receipt_number:    dr?.receipt_number    || 'RCP-' + b.id.slice(0,8).toUpperCase(),
                 booking_reference: b.booking_reference   || b.id.slice(0,8).toUpperCase(),
-                guest_name:        b.guest_name          || '—',
-                guest_email:       b.guest_email         || '—',
-                listing_title:     b.listings?.title     || '—',
+                guest_name:        b.guest_name          || 'â€”',
+                guest_email:       b.guest_email         || 'â€”',
+                listing_title:     b.listings?.title     || 'â€”',
                 issued_date:       (dr?.issued_at || b.created_at || '').slice(0, 10),
                 total_amount:      Number(b.total_amount || 0),
                 currency:          b.currency            || 'RWF',
-                booking_status:    b.status              || '—',
+                booking_status:    b.status              || 'â€”',
                 receipt_status:    dr?.cancelled_at ? 'Cancelled' : 'Active',
                 cancelled_by:      dr?.cancelled_by      || '',
                 cancellation_note: dr?.cancellation_note || '',
@@ -6438,7 +6443,7 @@ window.exportReceiptsList = async function(format) {
             // Header band
             doc.setFillColor(235, 103, 83); doc.rect(0, 0, W, 20, 'F');
             doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(14);
-            doc.text('AfriStay — Receipts Export', 14, 13);
+            doc.text('AfriStay â€” Receipts Export', 14, 13);
             doc.setFont('helvetica','normal'); doc.setFontSize(9);
             doc.text('Generated: ' + new Date().toLocaleDateString('en-US', { weekday:'short', month:'long', day:'numeric', year:'numeric' }), W-14, 13, { align:'right' });
 
@@ -6477,22 +6482,22 @@ window.exportReceiptsList = async function(format) {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   RECEIPT DOWNLOAD — pulls from digital_receipts table first,
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   RECEIPT DOWNLOAD â€” pulls from digital_receipts table first,
    falls back to generating from booking data
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-console.log("✨ [ADMIN] Dashboard.js loaded and ready!");
+console.log("âœ¨ [ADMIN] Dashboard.js loaded and ready!");
 
-/* ═══════════════════════════════════════════════
-   DOWNLOAD RECEIPT (PDF) — client-side via jsPDF
-   ═══════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   DOWNLOAD RECEIPT (PDF) â€” client-side via jsPDF
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 window.downloadReceipt = async function(bookingId) {
     console.log(' [RECEIPT] Downloading receipt for booking:', bookingId);
     toast('Preparing receipt...', 'info');
 
     try {
-        // ── Try digital_receipts table first ───────────────────────
+        // â”€â”€ Try digital_receipts table first â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         let receiptData = null;
         const { data: dbReceipt } = await _supabase
             .from('digital_receipts')
@@ -6504,8 +6509,8 @@ window.downloadReceipt = async function(bookingId) {
             console.log(' [RECEIPT] Found saved receipt:', dbReceipt.receipt_number);
             receiptData = dbReceipt;
         } else {
-            // ── Generate from booking + listing data ───────────────
-            console.log('ℹ️ [RECEIPT] No saved receipt — building from booking data');
+            // â”€â”€ Generate from booking + listing data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            console.log('â„¹ï¸ [RECEIPT] No saved receipt â€” building from booking data');
 
             // Try to generate via Edge Function (will also save it)
             try {
@@ -6561,9 +6566,9 @@ window.downloadReceipt = async function(bookingId) {
                     total_amount:    totalAmount,
                     currency:        listing?.currency || 'RWF',
                     payment_method:  booking.payment_method || 'unknown',
-                    guest_name:      booking.guest_name  || CURRENT_PROFILE?.full_name || '—',
-                    guest_email:     booking.guest_email || CURRENT_PROFILE?.email     || '—',
-                    guest_phone:     booking.guest_phone || '—',
+                    guest_name:      booking.guest_name  || CURRENT_PROFILE?.full_name || 'â€”',
+                    guest_email:     booking.guest_email || CURRENT_PROFILE?.email     || 'â€”',
+                    guest_phone:     booking.guest_phone || 'â€”',
                     owner_name:      owner?.full_name || 'Host',
                     issued_at:       booking.created_at || new Date().toISOString(),
                 };
@@ -6596,7 +6601,7 @@ window.downloadReceipt = async function(bookingId) {
             }
         }
 
-        // ── Build PDF ─────────────────────────────────────────────
+        // â”€â”€ Build PDF â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
             await new Promise((res, rej) => {
                 const s = document.createElement('script');
@@ -6611,11 +6616,11 @@ window.downloadReceipt = async function(bookingId) {
         const W = doc.internal.pageSize.width;
         const M = 18;
         let y = 0;
-        const fmt    = d => d ? new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }) : '—';
+        const fmt    = d => d ? new Date(d + (d.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }) : 'â€”';
         const money  = n => Number(n||0).toLocaleString('en-RW') + ' ' + receiptData.currency;
         const pmLabel = String(receiptData.payment_method||'').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
 
-        // ── Header band ───────────────────────────────────────────
+        // â”€â”€ Header band â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         doc.setFillColor(235, 103, 83);
         doc.rect(0, 0, W, 38, 'F');
 
@@ -6639,7 +6644,7 @@ window.downloadReceipt = async function(bookingId) {
         doc.text('Issued: ' + fmt(receiptData.issued_at || new Date().toISOString()), W - M, 29, { align: 'right' });
         y = 50;
 
-        // ── Status badge (green = confirmed, red = cancelled) ─────
+        // â”€â”€ Status badge (green = confirmed, red = cancelled) â”€â”€â”€â”€â”€
         const isCancelledReceipt = !!receiptData.cancelled_at;
         if (isCancelledReceipt) {
             doc.setFillColor(254, 226, 226);
@@ -6655,7 +6660,7 @@ window.downloadReceipt = async function(bookingId) {
         doc.text(isCancelledReceipt ? 'CANCELLED' : 'PAYMENT CONFIRMED', W / 2, y + 3, { align: 'center' });
         y += 18;
 
-        // ── Property info ─────────────────────────────────────────
+        // â”€â”€ Property info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         doc.setTextColor(22, 22, 22);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
@@ -6667,7 +6672,7 @@ window.downloadReceipt = async function(bookingId) {
         doc.text(receiptData.listing_address || 'Rwanda', M, y);
         y += 12;
 
-        // ── Stay details box ──────────────────────────────────────
+        // â”€â”€ Stay details box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         doc.setFillColor(250, 250, 250);
         doc.setDrawColor(232, 232, 232);
         doc.roundedRect(M, y, W - M * 2, 36, 3, 3, 'FD');
@@ -6683,7 +6688,7 @@ window.downloadReceipt = async function(bookingId) {
         doc.text(pmLabel, col2, y + 29);
         y += 46;
 
-        // ── Price breakdown ───────────────────────────────────────
+        // â”€â”€ Price breakdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         doc.setFillColor(255, 255, 255);
         doc.setDrawColor(232, 232, 232);
         doc.roundedRect(M, y, W - M * 2, 54, 3, 3, 'FD');
@@ -6708,7 +6713,7 @@ window.downloadReceipt = async function(bookingId) {
         drawLine('TOTAL AMOUNT', money(receiptData.total_amount),    y + 37, true, [235,103,83]);
         y += 54;
 
-        // ── Guest + Host info ─────────────────────────────────────
+        // â”€â”€ Guest + Host info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const boxH = 36;
         doc.setDrawColor(232, 232, 232); doc.setLineWidth(0.3);
         doc.roundedRect(M, y, (W - M * 2) / 2 - 4, boxH, 3, 3, 'D');
@@ -6718,22 +6723,22 @@ window.downloadReceipt = async function(bookingId) {
         doc.text('GUEST', M + 6, y + 9);
         doc.text('HOST', W / 2 + 7, y + 9);
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(22,22,22);
-        doc.text(receiptData.guest_name || '—', M + 6, y + 17);
-        doc.text(receiptData.owner_name || '—', W / 2 + 7, y + 17);
+        doc.text(receiptData.guest_name || 'â€”', M + 6, y + 17);
+        doc.text(receiptData.owner_name || 'â€”', W / 2 + 7, y + 17);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(130,130,130);
-        doc.text(receiptData.guest_email || '—', M + 6, y + 24);
-        doc.text(receiptData.guest_phone || '—', M + 6, y + 30);
+        doc.text(receiptData.guest_email || 'â€”', M + 6, y + 24);
+        doc.text(receiptData.guest_phone || 'â€”', M + 6, y + 30);
         y += boxH + 14;
 
-        // ── Footer ────────────────────────────────────────────────
+        // â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const pageH = doc.internal.pageSize.height;
         doc.setFillColor(248, 248, 248);
         doc.rect(0, pageH - 18, W, 18, 'F');
         doc.setDrawColor(235,235,235); doc.line(0, pageH - 18, W, pageH - 18);
         doc.setTextColor(170,170,170); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
-        doc.text('Official AfriStay receipt · © ' + new Date().getFullYear() + ' AfriStay Ltd · afristay.rw · support@afristay.rw', W / 2, pageH - 8, { align: 'center' });
+        doc.text('Official AfriStay receipt Â· Â© ' + new Date().getFullYear() + ' AfriStay Ltd Â· afristay.rw Â· support@afristay.rw', W / 2, pageH - 8, { align: 'center' });
 
-        // ── Cancelled: add info note + diagonal stamp ─────────────
+        // â”€â”€ Cancelled: add info note + diagonal stamp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (isCancelledReceipt) {
             const cancelFmt = receiptData.cancelled_at
                 ? new Date(receiptData.cancelled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -6742,7 +6747,7 @@ window.downloadReceipt = async function(bookingId) {
                 'Cancelled by: ' + (receiptData.cancelled_by || 'Admin'),
                 cancelFmt,
                 receiptData.cancellation_note ? 'Reason: ' + receiptData.cancellation_note : null,
-            ].filter(Boolean).join('  ·  ');
+            ].filter(Boolean).join('  Â·  ');
 
             if (y + 18 < pageH - 22) {
                 doc.setFillColor(254, 226, 226);
@@ -6770,9 +6775,9 @@ window.downloadReceipt = async function(bookingId) {
     }
 };
 
-/* ═══════════════════════════════════════════════════
-   OWNER — PROMOTIONS TAB
-   ═══════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   OWNER â€” PROMOTIONS TAB
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function loadOwnerPromotions(page = 0) {
     if (CURRENT_ROLE !== 'owner') return;
     const container = document.getElementById('ownerPromosContainer');
@@ -6818,13 +6823,13 @@ async function loadOwnerPromotions(page = 0) {
             card.innerHTML =
                 '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px;">' +
                 '<div>' +
-                '<div style="font-size:15px;font-weight:800;color:#1a1a1a;">' + escapeHtml(p.title || '—') + '</div>' +
-                '<div style="font-size:12px;color:#EB6753;margin-top:3px;font-weight:600;"><i class="fa-solid fa-house"></i> ' + escapeHtml(lstMap[p.listing_id] || '—') + '</div>' +
+                '<div style="font-size:15px;font-weight:800;color:#1a1a1a;">' + escapeHtml(p.title || 'â€”') + '</div>' +
+                '<div style="font-size:12px;color:#EB6753;margin-top:3px;font-weight:600;"><i class="fa-solid fa-house"></i> ' + escapeHtml(lstMap[p.listing_id] || 'â€”') + '</div>' +
                 '</div>' +
                 '<div style="background:#EB6753;color:#fff;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:800;white-space:nowrap;">Promo</div>' +
                 '</div>' +
                 (p.description ? '<p style="font-size:13px;color:#888;margin:0 0 10px;">' + escapeHtml(p.description) + '</p>' : '') +
-                '<div style="font-size:12px;color:#aaa;margin-bottom:10px;"><i class="fa-regular fa-calendar"></i> ' + (p.start_date || '—') + ' → ' + (p.end_date || '—') + '</div>' +
+                '<div style="font-size:12px;color:#aaa;margin-bottom:10px;"><i class="fa-regular fa-calendar"></i> ' + (p.start_date || 'â€”') + ' â†’ ' + (p.end_date || 'â€”') + '</div>' +
                 '<div style="display:flex;align-items:center;gap:8px;">' +
                 '<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:' + (isActive ? '#e8f5e9' : '#f5f5f5') + ';color:' + (isActive ? '#27ae60' : '#aaa') + ';">' + (isActive ? 'ACTIVE' : 'INACTIVE') + '</span>' +
                 '<button class="btn-s danger" style="margin-left:auto;" onclick="deleteOwnerPromo(\'' + p.id + '\')"><i class="fa-solid fa-trash"></i> Delete</button>' +
@@ -6920,9 +6925,9 @@ window.submitOwnerPromo = async function() {
     }
 };
 
-/* ═══════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    FINANCIAL TAB
-   ═══════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 let _finData = [];
 
 async function loadFinancialData(page = 0, searchTerm = '') {
@@ -6993,7 +6998,7 @@ async function loadFinancialData(page = 0, searchTerm = '') {
             // If a flat fee was configured, use it per night; otherwise fall back to 10% of total
             const afristayEarns = flatFee > 0 ? flatFee * nights : Math.round(total * DEFAULT_COMMISSION);
             const ownerEarns = total - afristayEarns;
-            return { ...b, lst_title: lst.title || '—', fee: flatFee, nights, afristayEarns, ownerEarns, total };
+            return { ...b, lst_title: lst.title || 'â€”', fee: flatFee, nights, afristayEarns, ownerEarns, total };
         });
 
         // Stats
@@ -7010,13 +7015,13 @@ async function loadFinancialData(page = 0, searchTerm = '') {
                 <td>${page * PAGE_SIZE + i + 1}.</td>
                 <td style="font-family:monospace;font-size:11px;">${shortId(r.id)}</td>
                 <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.lst_title)}">${escapeHtml(r.lst_title)}</td>
-                <td style="font-size:12px;">${escapeHtml(r.guest_name || '—')}<br><span style="color:#aaa;font-size:11px;">${escapeHtml(r.guest_email || '')}</span></td>
-                <td style="font-size:11px;color:#888;">${r.start_date} → ${r.end_date}</td>
+                <td style="font-size:12px;">${escapeHtml(r.guest_name || 'â€”')}<br><span style="color:#aaa;font-size:11px;">${escapeHtml(r.guest_email || '')}</span></td>
+                <td style="font-size:11px;color:#888;">${r.start_date} â†’ ${r.end_date}</td>
                 <td style="font-weight:600;">${fmt(r.ownerEarns)} RWF</td>
                 <td style="color:#EB6753;font-weight:700;">${fmt(r.afristayEarns)} RWF</td>
                 <td style="font-weight:800;">${fmt(r.total)} RWF</td>
                 <td><span class="status-badge status-${r.status}">${r.status}</span></td>
-                <td style="font-size:11px;color:#aaa;">${(r.payment_method || '—').replace(/_/g,' ')}</td>
+                <td style="font-size:11px;color:#aaa;">${(r.payment_method || 'â€”').replace(/_/g,' ')}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -7060,7 +7065,7 @@ function _renderFinStats(bookings, revenue, fees, ownerPayout) {
 
 window.loadFinancialData = loadFinancialData;
 
-/* ── Export Financial Data ── */
+/* â”€â”€ Export Financial Data â”€â”€ */
 window.exportFinancial = function(format) {
     if (!_finData.length) {
         toast('No data to export. Load financial data first.', 'warning');
@@ -7102,17 +7107,17 @@ window.exportFinancial = function(format) {
             const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             const W = doc.internal.pageSize.width;
             doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-            doc.text('AfriStay — Financial Report', 14, 16);
+            doc.text('AfriStay â€” Financial Report', 14, 16);
             doc.setFontSize(9); doc.setFont('helvetica', 'normal');
             doc.text('Generated: ' + new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }), 14, 22);
 
             const cols = ['#', 'Listing', 'Guest', 'Check-in', 'Check-out', 'Nights', 'Fee/Night', 'Owner Earns', 'AfriStay Earnings', 'Total Paid', 'Status'];
             const rows = _finData.map((r, i) => [
                 i + 1,
-                (r.lst_title || '—').substring(0, 22),
-                (r.guest_name || '—').substring(0, 18),
-                r.start_date || '—',
-                r.end_date || '—',
+                (r.lst_title || 'â€”').substring(0, 22),
+                (r.guest_name || 'â€”').substring(0, 18),
+                r.start_date || 'â€”',
+                r.end_date || 'â€”',
                 r.nights,
                 Math.round(r.fee || 0).toLocaleString(),
                 Math.round(r.ownerEarns).toLocaleString(),
@@ -7125,12 +7130,12 @@ window.exportFinancial = function(format) {
             doc.save('AfriStay-Financial-' + new Date().toISOString().split('T')[0] + '.pdf');
             toast('PDF exported!', 'success');
         } else {
-            // fallback — open print dialog of the table
+            // fallback â€” open print dialog of the table
             const html = `<html><head><title>AfriStay Financial Report</title>
             <style>body{font-family:sans-serif;font-size:12px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:6px 10px;text-align:left;}th{background:#EB6753;color:#fff;}tr:nth-child(even){background:#f9f9f9;}h2{color:#EB6753;}</style></head>
             <body><h2>AfriStay Financial Report</h2><p>Generated: ${new Date().toLocaleDateString()}</p>
             <table><thead><tr><th>#</th><th>Listing</th><th>Guest</th><th>Check-in</th><th>Check-out</th><th>Nights</th><th>Fee/Night</th><th>Owner Earns</th><th>AfriStay Earnings</th><th>Total Paid</th><th>Status</th></tr></thead><tbody>
-            ${_finData.map((r, i) => `<tr><td>${i+1}</td><td>${r.lst_title||'—'}</td><td>${r.guest_name||'—'}</td><td>${r.start_date||'—'}</td><td>${r.end_date||'—'}</td><td>${r.nights}</td><td>${Math.round(r.fee||0).toLocaleString()} RWF</td><td>${Math.round(r.ownerEarns).toLocaleString()} RWF</td><td>${Math.round(r.afristayEarns).toLocaleString()} RWF</td><td>${Math.round(r.total).toLocaleString()} RWF</td><td>${r.status}</td></tr>`).join('')}
+            ${_finData.map((r, i) => `<tr><td>${i+1}</td><td>${r.lst_title||'â€”'}</td><td>${r.guest_name||'â€”'}</td><td>${r.start_date||'â€”'}</td><td>${r.end_date||'â€”'}</td><td>${r.nights}</td><td>${Math.round(r.fee||0).toLocaleString()} RWF</td><td>${Math.round(r.ownerEarns).toLocaleString()} RWF</td><td>${Math.round(r.afristayEarns).toLocaleString()} RWF</td><td>${Math.round(r.total).toLocaleString()} RWF</td><td>${r.status}</td></tr>`).join('')}
             </tbody></table></body></html>`;
             const w = window.open('', '_blank');
             w.document.write(html);
@@ -7140,9 +7145,9 @@ window.exportFinancial = function(format) {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    BULK BOOKING ACTIONS
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 window._bulkBookingIds = new Set();
 
 function _updateBulkBar() {
@@ -7190,7 +7195,7 @@ window.bulkActionBookings = async function(status) {
         const { error } = await _supabase.from('bookings').update({ status }).in('id', ids);
         if (error) throw error;
         toast(`${ids.length} booking(s) updated to "${status}"!`, 'success');
-        logAudit({ action: 'bulk_update_bookings', entityType: 'booking', description: `Bulk ${label} — ${ids.length} bookings`, metadata: { ids, status } });
+        logAudit({ action: 'bulk_update_bookings', entityType: 'booking', description: `Bulk ${label} â€” ${ids.length} bookings`, metadata: { ids, status } });
         window.clearBulkBookings();
         loadBookingsTable();
     } catch(err) {
@@ -7199,9 +7204,9 @@ window.bulkActionBookings = async function(status) {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    REVENUE CHART (Chart.js)
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 let _revenueChart = null;
 
 window.drawRevenueChart = function() {
@@ -7209,7 +7214,7 @@ window.drawRevenueChart = function() {
     const wrap   = document.getElementById('revenueChartWrap');
     if (!canvas) return;
 
-    // Build day-by-day map for current month (day 1 → today)
+    // Build day-by-day map for current month (day 1 â†’ today)
     const now   = new Date();
     const year  = now.getFullYear();
     const month = now.getMonth(); // 0-indexed
@@ -7267,12 +7272,12 @@ window.drawRevenueChart = function() {
     });
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   CSV EXPORTS — Users & Bookings
-   ═══════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   CSV EXPORTS â€” Users & Bookings
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 window.exportUsers = async function(format = 'csv') {
     if (CURRENT_ROLE !== 'admin') { toast('Admin only', 'error'); return; }
-    toast('Preparing users export…', 'info', 2000);
+    toast('Preparing users exportâ€¦', 'info', 2000);
     try {
         const { data, error } = await _supabase
             .from('profiles')
@@ -7298,7 +7303,7 @@ window.exportUsers = async function(format = 'csv') {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape' });
             doc.setFontSize(14);
-            doc.text('AfriStay — Users Export (' + dateStr + ')', 14, 15);
+            doc.text('AfriStay â€” Users Export (' + dateStr + ')', 14, 15);
             doc.autoTable({
                 head: [headers],
                 body: rows,
@@ -7326,9 +7331,109 @@ window.exportUsers = async function(format = 'csv') {
     }
 };
 
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   SINGLE USER FULL EXPORT  â†’  JSON
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+window.exportSingleUser = async function(userId, displayName) {
+    if (CURRENT_ROLE !== 'admin') { toast('Admin only', 'error'); return; }
+    toast('Gathering everything for ' + (displayName || 'user') + '...', 'info', 5000);
+    try {
+        const [profileRes, guestBookingsRes, favoritesRes] = await Promise.all([
+            _supabase.from('profiles').select('id, full_name, email, phone, role, banned, created_at, bio').eq('id', userId).single(),
+            _supabase.from('bookings').select('id, listing_id, start_date, end_date, total_amount, status, payment_status, payment_method, created_at, guest_name, guest_email, listings(title, price, price_afristay_fee)').eq('user_id', userId).order('created_at', { ascending: false }),
+            _supabase.from('favorites').select('id, listing_id, created_at, listings(title, price_display, price, address)').eq('user_id', userId).order('created_at', { ascending: false }),
+        ]);
+        if (profileRes.error) throw profileRes.error;
+        const profile = profileRes.data;
+        const isOwnerOrAdmin = profile.role === 'owner' || profile.role === 'admin';
+
+        const { data: messages } = await _supabase.from('contact_messages').select('id, name, email, message, created_at').eq('email', profile.email || '').order('created_at', { ascending: false });
+
+        let ownedListings = [], receivedBookings = [], walletInfo = null;
+        if (isOwnerOrAdmin) {
+            const { data: listings } = await _supabase.from('listings').select('id, title, status, availability_status, price, price_display, price_afristay_fee, avg_rating, reviews_count, address, created_at, provinces(name), districts(name)').eq('owner_id', userId).order('created_at', { ascending: false });
+            ownedListings = listings || [];
+            if (ownedListings.length) {
+                const lIds = ownedListings.map(l => l.id);
+                const { data: rcv } = await _supabase.from('bookings').select('id, listing_id, guest_name, guest_email, start_date, end_date, total_amount, status, payment_status, payment_method, created_at').in('listing_id', lIds).order('created_at', { ascending: false });
+                receivedBookings = rcv || [];
+            }
+            const { data: wallet } = await _supabase.from('owner_wallets').select('payout_method, momo_phone, momo_name, bank_name, account_number').eq('owner_id', userId).maybeSingle();
+            walletInfo = wallet;
+        }
+
+        const calcNights = (b) => (b.start_date && b.end_date) ? Math.round((new Date(b.end_date) - new Date(b.start_date)) / 86400000) : null;
+        const listingMap = {};
+        ownedListings.forEach(l => { listingMap[l.id] = l; });
+
+        const gList = guestBookingsRes.data || [];
+        const fList = favoritesRes.data     || [];
+        const mList = messages              || [];
+        const gActive    = gList.filter(b => b.status === 'confirmed');
+        const gCompleted = gList.filter(b => b.status === 'completed');
+        const gCancelled = gList.filter(b => b.status === 'cancelled');
+        const gPending   = gList.filter(b => ['pending','awaiting_approval'].includes(b.status));
+        const totalSpent = [...gActive, ...gCompleted].reduce((s, b) => s + (Number(b.total_amount) || 0), 0);
+
+        const rcvPaid      = receivedBookings.filter(b => ['confirmed','completed'].includes(b.status));
+        const rcvCancelled = receivedBookings.filter(b => b.status === 'cancelled');
+        let grossRevenue = 0, afristayTotalCut = 0;
+        rcvPaid.forEach(b => {
+            const lst = listingMap[b.listing_id];
+            const n   = calcNights(b) || 0;
+            grossRevenue     += Number(b.total_amount || 0);
+            afristayTotalCut += Number(lst?.price_afristay_fee || 0) * n;
+        });
+
+        const payload = {
+            export_meta: { platform: 'AfriStay', generated_at: new Date().toISOString(), generated_by: 'Admin Dashboard' },
+            profile: { id: profile.id, full_name: profile.full_name || null, email: profile.email || null, phone: profile.phone || null, bio: profile.bio || null, role: profile.role || null, status: profile.banned ? 'Banned' : 'Active', joined: (profile.created_at || '').slice(0, 10) },
+            summary_as_guest: { total_bookings: gList.length, pending: gPending.length, active_bookings: gActive.length, completed_stays: gCompleted.length, cancelled_bookings: gCancelled.length, total_spent_rwf: totalSpent, total_favorites: fList.length, messages_sent: mList.length },
+            bookings_made_as_guest: gList.map((b, i) => ({ index: i+1, booking_id: b.id, listing: b.listings?.title || b.listing_id || null, check_in: b.start_date || null, check_out: b.end_date || null, nights: calcNights(b), total_paid_rwf: Number(b.total_amount) || null, status: b.status || null, payment_method: b.payment_method || null, payment_status: b.payment_status || null, booked_on: (b.created_at || '').slice(0, 10) })),
+            favorites: fList.map((f, i) => ({ index: i+1, listing: f.listings?.title || f.listing_id || null, address: f.listings?.address || null, price_display_rwf: f.listings?.price_display || f.listings?.price || null, date_saved: (f.created_at || '').slice(0, 10) })),
+            contact_messages: mList.map((m, i) => ({ index: i+1, name: m.name || null, email: m.email || null, message: m.message || null, sent_on: (m.created_at || '').slice(0, 10) })),
+        };
+
+        if (isOwnerOrAdmin) {
+            payload.summary_as_owner = { total_listings: ownedListings.length, approved_listings: ownedListings.filter(l => l.status === 'approved').length, pending_listings: ownedListings.filter(l => l.status === 'pending').length, total_bookings_received: receivedBookings.length, active_received: receivedBookings.filter(b => b.status === 'confirmed').length, completed_received: receivedBookings.filter(b => b.status === 'completed').length, cancelled_received: rcvCancelled.length, gross_revenue_rwf: grossRevenue, afristay_commission_rwf: afristayTotalCut, owner_net_earnings_rwf: grossRevenue - afristayTotalCut };
+            payload.payout_info = walletInfo ? { method: walletInfo.payout_method || null, momo_phone: walletInfo.momo_phone || null, momo_name: walletInfo.momo_name || null, bank_name: walletInfo.bank_name || null, account_number: walletInfo.account_number || null } : null;
+            payload.owned_listings = ownedListings.map((l, i) => {
+                const lB = receivedBookings.filter(b => b.listing_id === l.id);
+                const lP = lB.filter(b => ['confirmed','completed'].includes(b.status));
+                const lG = lP.reduce((s, b) => s + (Number(b.total_amount) || 0), 0);
+                const lA = lP.reduce((s, b) => s + (Number(l.price_afristay_fee || 0) * (calcNights(b) || 0)), 0);
+                return { index: i+1, listing_id: l.id, title: l.title || null, status: l.status || null, availability: l.availability_status || null, location: [l.districts?.name, l.provinces?.name].filter(Boolean).join(', ') || l.address || null, owner_price_per_night_rwf: Number(l.price || 0), guest_price_per_night_rwf: Number(l.price_display || 0), afristay_fee_per_night_rwf: Number(l.price_afristay_fee || 0), avg_rating: l.avg_rating || null, reviews_count: l.reviews_count || 0, listed_on: (l.created_at || '').slice(0, 10), total_bookings: lB.length, completed_bookings: lP.length, gross_revenue_rwf: lG, afristay_commission_rwf: lA, owner_net_rwf: lG - lA };
+            });
+            payload.bookings_received_on_listings = receivedBookings.map((b, i) => {
+                const lst  = listingMap[b.listing_id];
+                const n    = calcNights(b) || 0;
+                const afri = Number(lst?.price_afristay_fee || 0) * n;
+                return { index: i+1, booking_id: b.id, listing: lst?.title || b.listing_id || null, guest_name: b.guest_name || null, guest_email: b.guest_email || null, check_in: b.start_date || null, check_out: b.end_date || null, nights: n || null, total_paid_by_guest_rwf: Number(b.total_amount) || null, afristay_commission_rwf: afri || null, owner_earnings_rwf: (Number(b.total_amount) || 0) - afri || null, status: b.status || null, payment_method: b.payment_method || null, payment_status: b.payment_status || null, booked_on: (b.created_at || '').slice(0, 10) };
+            });
+        }
+
+        const json = JSON.stringify(payload, null, 2);
+        const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const safeName = (profile.full_name || profile.email || userId).replace(/[^a-z0-9]/gi, '_');
+        const dateStr  = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = 'AfriStay-User-' + safeName + '-' + dateStr + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        const parts = [gList.length + ' bookings made', fList.length + ' favorites', mList.length + ' messages'];
+        if (isOwnerOrAdmin) parts.push(ownedListings.length + ' listings owned', receivedBookings.length + ' bookings received');
+        toast('Exported: ' + parts.join(' / '), 'success', 6000);
+        logAudit({ action: 'export_single_user', entityType: 'profile', entityId: userId, description: 'Full export for ' + profile.email + ' (' + profile.role + ') -- ' + parts.join(', ') });
+    } catch(err) {
+        toast('Export failed: ' + err.message, 'error');
+    }
+};
 window.exportBookings = async function(format = 'csv') {
     if (CURRENT_ROLE !== 'admin') { toast('Admin only', 'error'); return; }
-    toast('Preparing bookings export…', 'info', 2000);
+    toast('Preparing bookings exportâ€¦', 'info', 2000);
     try {
         const { data, error } = await _supabase
             .from('bookings')
@@ -7376,7 +7481,7 @@ window.exportBookings = async function(format = 'csv') {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'landscape' });
             doc.setFontSize(14);
-            doc.text('AfriStay — Bookings Export (' + dateStr + ')', 14, 15);
+            doc.text('AfriStay â€” Bookings Export (' + dateStr + ')', 14, 15);
             // PDF uses condensed columns (landscape fits ~12 cols at 7pt)
             const pdfCols = ['#', 'Booking ID', 'Listing', 'Guest', 'Check-in', 'Check-out', 'Nights', 'Owner/Night', 'Fee/Night', 'Guest/Night', 'Total (RWF)', 'Status'];
             const pdfRows = rows.map(r => [r[0], r[1].slice(0,10), (r[2]||'').substring(0,18), (r[3]||'').substring(0,14), r[5], r[6], r[7], r[8].toLocaleString(), r[9].toLocaleString(), r[10].toLocaleString(), r[11].toLocaleString(), r[12]]);
@@ -7408,14 +7513,14 @@ window.exportBookings = async function(format = 'csv') {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PLATFORM CONFIG EDITOR
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 window.loadPlatformConfig = async function() {
     if (CURRENT_ROLE !== 'admin') return;
     const container = document.getElementById('platformConfigContainer');
     if (!container) return;
-    container.innerHTML = '<p style="color:#aaa;font-size:13px;text-align:center;padding:16px;">Loading…</p>';
+    container.innerHTML = '<p style="color:#aaa;font-size:13px;text-align:center;padding:16px;">Loadingâ€¦</p>';
     try {
         const { data, error } = await _supabase
             .from('platform_config')
@@ -7458,9 +7563,9 @@ window.savePlatformConfig = async function(key, value) {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    BROADCAST NOTIFICATIONS
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 window.sendBroadcast = async function() {
     if (CURRENT_ROLE !== 'admin') { toast('Admin only', 'error'); return; }
     const title   = document.getElementById('broadcastTitle')?.value.trim();
@@ -7472,7 +7577,7 @@ window.sendBroadcast = async function() {
 
     const btn = document.getElementById('sendBroadcastBtn');
     const statusEl = document.getElementById('broadcastStatus');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sendingâ€¦'; }
 
     try {
         let q = _supabase.from('profiles').select('id').neq('id', CURRENT_PROFILE.id);
@@ -7497,7 +7602,7 @@ window.sendBroadcast = async function() {
 
         toast(`Broadcast sent to ${users.length} user(s)!`, 'success');
         logAudit({ action: 'broadcast_notification', entityType: 'notification', description: `Broadcast to "${target}" (${users.length} users): "${title}"` });
-        if (statusEl) statusEl.innerHTML = `<div style="background:#e8f5e9;color:#27ae60;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;">✓ Sent to ${users.length} users</div>`;
+        if (statusEl) statusEl.innerHTML = `<div style="background:#e8f5e9;color:#27ae60;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;">âœ“ Sent to ${users.length} users</div>`;
         document.getElementById('broadcastTitle').value = '';
         document.getElementById('broadcastMessage').value = '';
         document.getElementById('broadcastLink').value = '';
@@ -7510,18 +7615,18 @@ window.sendBroadcast = async function() {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    USER IMPERSONATION
    Admin generates a magic-link for any user via edge function
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 window.impersonateUser = async function(userId, userEmail) {
     if (CURRENT_ROLE !== 'admin') { toast('Admin only', 'error'); return; }
     if (!confirm(`Impersonate ${userEmail}?\n\nYou will be redirected and logged in as this user. Open in a new tab to keep your admin session.`)) return;
 
-    toast('Generating impersonation link…', 'info', 4000);
+    toast('Generating impersonation linkâ€¦', 'info', 4000);
     try {
         const { data: { session } } = await _supabase.auth.getSession();
-        if (!session?.access_token) throw new Error('No active session — please log in again');
+        if (!session?.access_token) throw new Error('No active session â€” please log in again');
         const res = await fetch(CONFIG.FUNCTIONS_BASE + '/impersonate-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
@@ -7539,14 +7644,14 @@ window.impersonateUser = async function(userId, userEmail) {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MANUAL PAYOUT TRIGGER
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 window.loadPayoutOwners = async function() {
     if (CURRENT_ROLE !== 'admin') return;
     const sel = document.getElementById('payoutOwnerSelect');
     if (!sel) return;
-    sel.innerHTML = '<option value="">Loading…</option>';
+    sel.innerHTML = '<option value="">Loadingâ€¦</option>';
     try {
         const { data, error } = await _supabase
             .from('profiles')
@@ -7554,16 +7659,16 @@ window.loadPayoutOwners = async function() {
             .eq('role', 'owner')
             .order('full_name');
         if (error) throw error;
-        sel.innerHTML = '<option value="">Select owner…</option>' +
+        sel.innerHTML = '<option value="">Select ownerâ€¦</option>' +
             (data || []).map(o => `<option value="${o.id}">${escapeHtml(o.full_name || o.email)}</option>`).join('');
     } catch(err) {
         sel.innerHTML = '<option value="">Failed to load</option>';
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MAINTENANCE MODE TOGGLE
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 window.setMaintenanceMode = async function(enable) {
     if (CURRENT_ROLE !== 'admin') { toast('Admin only', 'error'); return; }
     const msg = document.getElementById('maintenanceMsg')?.value.trim() || '';
@@ -7575,7 +7680,7 @@ window.setMaintenanceMode = async function(enable) {
         if (enable && msg) {
             await _supabase.from('platform_config').upsert({ key: 'maintenance_message', value: msg }, { onConflict: 'key' });
         }
-        toast(`Maintenance mode ${enable ? 'ENABLED — site is now blocked for users' : 'disabled — site is live again'}!`, enable ? 'warning' : 'success');
+        toast(`Maintenance mode ${enable ? 'ENABLED â€” site is now blocked for users' : 'disabled â€” site is live again'}!`, enable ? 'warning' : 'success');
         logAudit({ action: enable ? 'enable_maintenance_mode' : 'disable_maintenance_mode', entityType: 'platform_config', description: enable ? `Maintenance enabled: ${msg || '(no message)'}` : 'Maintenance disabled' });
     } catch(err) {
         toast(sanitizeError(err), 'error');

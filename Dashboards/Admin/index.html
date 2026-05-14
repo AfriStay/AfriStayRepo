@@ -106,6 +106,19 @@
         .users-search{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
         .users-search input{flex:1;min-width:200px;padding:9px 14px;border:1.5px solid #ebebeb;border-radius:10px;font-size:13px;font-family:'Inter',sans-serif;outline:none;background:#fff;transition:border-color .2s;}
         .users-search input:focus{border-color:var(--primary);}
+        /* Users table action buttons */
+        .user-actions{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;}
+        .ua-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all .18s;white-space:nowrap;}
+        .ua-btn:hover{filter:brightness(.92);}
+        /* Mobile: hide less critical columns */
+        @media(max-width:900px){
+            #usersTable th:nth-child(4),#usersTable td:nth-child(4),
+            #usersTable th:nth-child(6),#usersTable td:nth-child(6){display:none;}
+        }
+        @media(max-width:620px){
+            #usersTable th:nth-child(3),#usersTable td:nth-child(3){display:none;}
+            .ua-btn span{display:none;}
+        }
         .status-select{padding:5px 10px;border:1.5px solid #ebebeb;border-radius:8px;font-size:12px;font-family:'Inter',sans-serif;outline:none;background:#fff;cursor:pointer;}
         .fi{width:100%;padding:11px 14px;border:1.5px solid #e8e8e8;border-radius:11px;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;background:#fff;color:#1a1a1a;}
         .fi:focus{border-color:var(--primary);}
@@ -312,8 +325,8 @@
                     </div>
                     <div style="overflow-x:auto;">
                         <table class="dt" id="usersTable">
-                            <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Action</th><th>Delete</th></tr></thead>
-                            <tbody id="usersTableBody"><tr><td colspan="8" style="text-align:center;padding:30px;color:#aaa;">Click Refresh to load users</td></tr></tbody>
+                            <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody id="usersTableBody"><tr><td colspan="7" style="text-align:center;padding:30px;color:#aaa;">Click Refresh to load users</td></tr></tbody>
                         </table>
                     </div>
                     <div id="dashUsersPagination" style="margin-top:8px;"></div>
