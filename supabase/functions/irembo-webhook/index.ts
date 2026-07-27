@@ -312,6 +312,21 @@ serve(async (req) => {
       console.error('[WEBHOOK] Booking update failed:', updateErr.message);
       return new Response('Update failed', { status: 500 });
     }
+
+    const { error: paymentInsertErr } = await sb.from('payments').insert({
+      booking_id: booking.id,
+      user_id: booking.user_id || null,
+      provider: 'irembo_pay',
+      provider_reference: transactionId,
+      amount: booking.total_amount,
+      currency: booking.listings?.currency || booking.currency || 'RWF',
+      status: 'paid',
+      reference: paymentRef,
+      raw_response: payload,
+    });
+    if (paymentInsertErr) {
+      console.error('[WEBHOOK] payments insert failed (non-fatal):', paymentInsertErr.message);
+    }
   } else {
     console.log('[WEBHOOK] Already confirmed, skipping update (retry):', transactionId);
     return new Response('OK', { status: 200 });

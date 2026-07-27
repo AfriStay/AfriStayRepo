@@ -775,7 +775,7 @@ async function resolveImages(ids) {
     if (missing.length) {
         await Promise.all(missing.map(async id => {
             try {
-                const { data: files } = await _sb.storage.from('listing_images').list(id, { limit: 1 });
+                const { data: files } = await _sb.storage.from('listing-images').list(id, { limit: 1 });
                 const f = (files||[]).find(x => x.name && !x.id?.endsWith('/'));
                 if (f) imgMap[id] = STORAGE_BASE + '/' + id + '/' + f.name;
             } catch(e) {}

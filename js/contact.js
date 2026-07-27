@@ -42,7 +42,7 @@
 
         // 2) call edge function to notify admin by email (optional)
         // NOTE: CONFIG.FUNCTIONS_BASE is derived in config.js
-        const functionsBase = (window.CONFIG && window.CONFIG.FUNCTIONS_BASE) || (window.CONFIG && window.CONFIG.SUPABASE_URL && window.CONFIG.SUPABASE_URL.replace('.supabase.co','.functions.supabase.co')) || '';
+        const functionsBase = (typeof CONFIG !== 'undefined' && CONFIG.FUNCTIONS_BASE) || '';
         const notifyUrl = functionsBase ? `${functionsBase}/notify-admin-contact` : null;
 
         if (notifyUrl) {

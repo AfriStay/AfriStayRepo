@@ -650,12 +650,6 @@ function bindUIInteractions() {
     // Promo form submit â€” modal is now self-built, listener kept harmless
     document.getElementById('promoForm')?.addEventListener('submit', async (e) => { e.preventDefault(); await handleCreatePromo(); });
 
-    // === Settings Form Submit ===
-    document.getElementById('settingsForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await handleSaveSettings();
-    });
-
     // === Logout Button ===
     if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
@@ -6155,66 +6149,6 @@ window.downloadAllReceiptsZip = async function() {
     }
 };
 
-/* â”€â”€ Open receipt as PDF in a new browser tab â”€â”€ */
-window.openReceiptPdf = async function(bookingId) {
-    // Re-uses downloadReceipt logic but opens in browser instead of downloading
-    toast('Preparing receiptâ€¦', 'info');
-    try {
-        // Build receipt data the same way downloadReceipt does
-        let receiptData = null;
-        const { data: dbReceipt } = await _supabase.from('digital_receipts').select('*').eq('booking_id', bookingId).maybeSingle();
-        if (dbReceipt) {
-            receiptData = dbReceipt;
-        } else {
-            const { data: booking } = await _supabase.from('bookings').select('*').eq('id', bookingId).single();
-            const { data: listing } = await _supabase.from('listings').select('title,price,price_display,currency,address,province_id,district_id,owner_id').eq('id', booking.listing_id).single();
-            const ownerRes = listing?.owner_id ? await _supabase.from('profiles').select('full_name').eq('id', listing.owner_id).single() : { data: null };
-            let location = listing?.address || 'Rwanda';
-            try {
-                const [{ data: dist }, { data: prov }] = await Promise.all([
-                    listing?.district_id ? _supabase.from('districts').select('name').eq('id', listing.district_id).single() : { data: null },
-                    listing?.province_id ? _supabase.from('provinces').select('name').eq('id', listing.province_id).single() : { data: null },
-                ]);
-                location = [dist?.name, prov?.name].filter(Boolean).join(', ') || location;
-            } catch {}
-            const nights = Math.max(1, Math.ceil((new Date(booking.end_date) - new Date(booking.start_date)) / 86400000));
-            const totalAmount = Number(booking.total_amount || 0);
-            const priceNight  = Number(listing?.price_display || listing?.price || (nights > 0 ? totalAmount / nights : 0) || 0);
-            receiptData = {
-                receipt_number: 'RCP-' + booking.id.slice(0,8).toUpperCase(),
-                listing_title: listing?.title || 'AfriStay Property',
-                listing_address: location,
-                check_in: booking.start_date, check_out: booking.end_date, nights,
-                price_per_night: priceNight, subtotal: priceNight * nights,
-                platform_fee: Math.round(totalAmount * 0.05), total_amount: totalAmount,
-                currency: listing?.currency || 'RWF', payment_method: booking.payment_method || 'unknown',
-                guest_name: booking.guest_name || 'â€”', guest_email: booking.guest_email || 'â€”',
-                guest_phone: booking.guest_phone || 'â€”', owner_name: ownerRes.data?.full_name || 'Host',
-                issued_at: booking.created_at || new Date().toISOString(),
-            };
-        }
-        // Call downloadReceipt but intercept â€” simpler: just call downloadReceipt and let user deal with it
-        // Instead, open a data: URL in a new tab
-        if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
-            await new Promise((res, rej) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                s.onload = res; s.onerror = rej; document.head.appendChild(s);
-            });
-        }
-        // Temporarily override doc.save to capture the blob instead
-        const { jsPDF } = window.jspdf || window;
-        // We build a minimal PDF for preview â€” just delegate to downloadReceipt
-        // but use jsPDF's output('bloburl') to open in tab
-        // Re-use the full build by borrowing it: trick â€” call downloadReceipt then cancel the download
-        // Better: build inline here using the same pipeline
-        await downloadReceipt(bookingId); // fallback: just download
-    } catch(err) {
-        console.error('[RECEIPT OPEN]', err);
-        await downloadReceipt(bookingId);
-    }
-};
-
 // Make openReceiptPdf actually open in browser using jsPDF output
 // Override: use jsPDF's blob URL approach
 window.openReceiptPdf = async function(bookingId) {
@@ -6226,6 +6160,7 @@ window.openReceiptPdf = async function(bookingId) {
             receiptData = dbReceipt;
         } else {
             const { data: booking } = await _supabase.from('bookings').select('*').eq('id', bookingId).single();
+            if (!booking) { toast('Booking not found', 'error'); return; }
             const { data: listing } = await _supabase.from('listings').select('title,price,price_display,currency,address,province_id,district_id,owner_id').eq('id', booking.listing_id).single();
             const ownerRes = listing?.owner_id ? await _supabase.from('profiles').select('full_name').eq('id', listing.owner_id).single() : { data: null };
             let location = listing?.address || 'Rwanda';
@@ -6533,6 +6468,7 @@ window.downloadReceipt = async function(bookingId) {
             // Fallback: build from raw booking data
             if (!receiptData) {
                 const { data: booking }  = await _supabase.from('bookings').select('*').eq('id', bookingId).single();
+                if (!booking) { toast('Booking not found', 'error'); return; }
                 const { data: listing }  = await _supabase.from('listings').select('title,price,price_display,currency,address,province_id,district_id,owner_id').eq('id', booking.listing_id).single();
                 const ownerRes = listing?.owner_id
                     ? await _supabase.from('profiles').select('full_name,email,phone').eq('id', listing.owner_id).single()
@@ -6597,7 +6533,8 @@ window.downloadReceipt = async function(bookingId) {
                     issued_at:       receiptData.issued_at,
                     user_id:         booking.user_id || null,
                 }, { onConflict: 'booking_id', ignoreDuplicates: true })
-                    .then(({ error: uErr }) => { if (uErr) console.warn('[RECEIPT] Save skipped:', uErr.message); });
+                    .then(({ error: uErr }) => { if (uErr) console.warn('[RECEIPT] Save skipped:', uErr.message); })
+                    .catch(err => console.warn('[RECEIPT] Save threw:', err));
             }
         }
 

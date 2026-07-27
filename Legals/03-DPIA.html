@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AfriStay - Data Protection Impact Assessment</title>
+<style>
+  @page { margin: 2.5cm; }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000; max-width: 18cm; margin: 0 auto; padding: 2cm; }
+  h1 { font-size: 16pt; text-align: center; margin-bottom: 0; }
+  .subtitle { text-align: center; font-size: 11pt; color: #333; margin-top: 4px; margin-bottom: 2em; }
+  h2 { font-size: 13pt; border-bottom: 1px solid #999; padding-bottom: 3px; margin-top: 1.8em; }
+  table { width: 100%; border-collapse: collapse; margin: 0.8em 0 1.2em; font-size: 10.5pt; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef1f6; }
+  p, li { text-align: justify; }
+  .meta { font-size: 10pt; color: #555; margin-bottom: 1.5em; }
+  .risk-low { background: #e8f6e8; }
+  .risk-med { background: #fff8e1; }
+  .risk-high { background: #fdeaea; }
+  .sign-block { margin-top: 3em; }
+</style>
+</head>
+<body>
+
+<h1>DATA PROTECTION IMPACT ASSESSMENT</h1>
+<div class="subtitle">For Hosting Personal Data Outside Rwanda — AfriStay LTD</div>
+<div class="meta">Document Reference: AfriStay-DPIA-001 &nbsp;|&nbsp; Version 1.0 &nbsp;|&nbsp; Date: 17 July 2026 &nbsp;|&nbsp; Prepared by: Emmanuel BUTERA, CEO &amp; Data Protection Officer, AfriStay LTD</div>
+
+<h2>1. Purpose and Scope</h2>
+<p>
+This Data Protection Impact Assessment (DPIA) evaluates the risks associated with AfriStay LTD's processing and
+storage of personal data using cloud infrastructure providers located outside Rwanda — specifically Supabase
+(database, authentication, file storage, application backend) and Resend (transactional email delivery) — and
+the safeguards AfriStay has put in place to mitigate those risks, in support of AfriStay's application to the
+National Cyber Security Authority (NCSA) under Law N° 058/2021 of 13/10/2021.
+</p>
+
+<h2>2. Description of Processing</h2>
+<p>
+AfriStay operates a booking platform connecting accommodation Guests with property Owners in Rwanda. To deliver
+this service, AfriStay collects and processes account, booking, listing, review, and contact-form data (see
+Section 4 of the accompanying Storage Architecture document for the full data inventory). This data is stored in a
+Supabase-managed PostgreSQL database and processed by Supabase Edge Functions to run the booking lifecycle
+(request → owner approval → payment → confirmation) and by Resend to deliver related email notifications.
+</p>
+
+<h2>3. Necessity and Proportionality</h2>
+<p>
+AfriStay evaluated Rwanda-based hosting alternatives and found no local provider currently offering an equivalent
+integrated managed database, authentication, row-level access control, serverless compute, and file storage
+platform required to operate a real-time, multi-role (Guest/Owner/Admin) booking system securely and cost-effectively
+at AfriStay's current early stage. Supabase and Resend were selected because they (a) provide the specific
+technical capabilities the platform requires, (b) publish independent security compliance documentation, and
+(c) offer Data Processing Agreements governing their handling of AfriStay's data. Only the minimum personal data
+necessary to operate the platform is collected (see Data Protection Commitments, AfriStay-DPC-001); no payment
+data, national ID data, or biometric data is collected or transferred.
+</p>
+
+<h2>4. Data Subjects and Current Volumes</h2>
+<p>As of 17 July 2026, the platform is in its pre-launch/early-operations phase. Current approximate volumes:</p>
+<table>
+<tr><th>Data subject category</th><th>Approx. current volume</th><th>Notes</th></tr>
+<tr><td>Registered user accounts (Guests)</td><td>7</td><td>Grows with public launch and marketing</td></tr>
+<tr><td>Registered property Owners</td><td>3</td><td>Includes pending owner applications</td></tr>
+<tr><td>Internal admin/staff accounts</td><td>4</td><td>AfriStay team members</td></tr>
+<tr><td>Bookings on record</td><td>13</td><td>Includes historic/test bookings from platform development</td></tr>
+<tr><td>Property listings</td><td>4</td><td>—</td></tr>
+<tr><td>Contact-form submissions</td><td>2</td><td>—</td></tr>
+</table>
+<p>
+These figures represent current state during pre-launch testing and are expected to increase materially once the
+platform is publicly launched. AfriStay will keep this DPIA under review as volumes grow (see Section 8).
+</p>
+
+<h2>5. Data Flow Summary</h2>
+<p>
+A full diagram is provided in the accompanying Data Flow Diagram &amp; Sub-Processor Register. In summary: a user's
+browser submits data over HTTPS directly to Supabase (database/auth/storage) and, for approval/payment emails,
+Supabase's Edge Functions call Resend's API over HTTPS to dispatch email. Payment itself is redirected to IremboPay,
+which is not passed any AfriStay-collected personal data beyond the guest's name, email, and phone number needed to
+generate the payment invoice; AfriStay never receives or stores card/mobile-money credentials from IremboPay.
+</p>
+
+<h2>6. Risk Assessment</h2>
+<table>
+<tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr>
+<tr class="risk-med">
+  <td>Unauthorized access to personal data (e.g. compromised credentials, misconfigured access)</td>
+  <td>Low–Medium</td><td>High</td>
+  <td>Row Level Security enforced on every table; service-role key confined to server-side Edge Functions; Supabase Auth with hashed credentials.</td>
+</tr>
+<tr class="risk-low">
+  <td>Data interception in transit</td>
+  <td>Low</td><td>Medium</td>
+  <td>All traffic encrypted via HTTPS/TLS between client, Supabase, and Resend.</td>
+</tr>
+<tr class="risk-med">
+  <td>Foreign legal access to data (e.g. U.S. government requests to a U.S.-based provider)</td>
+  <td>Low</td><td>Medium</td>
+  <td>Data minimisation limits what is stored (no payment/ID/biometric data); Data Processing Agreements restrict provider use of data to service delivery; AfriStay monitors provider transparency reports.</td>
+</tr>
+<tr class="risk-med">
+  <td>Sub-processor data breach at Supabase or Resend</td>
+  <td>Low</td><td>High</td>
+  <td>Providers selected for published independent security compliance (e.g. SOC 2 Type II); AfriStay's Data Breach Response and Notification Procedure (AfriStay-DBRP-001) governs escalation and NSCA/user notification within legal timeframes regardless of where the breach originates.</td>
+</tr>
+<tr class="risk-low">
+  <td>Excessive data retention</td>
+  <td>Low</td><td>Low–Medium</td>
+  <td>Retention periods and deletion defined in Data Retention Policy (AfriStay-DRP-001); deletion requests actioned within 30 days.</td>
+</tr>
+<tr class="risk-low">
+  <td>Vendor lock-in / service discontinuation</td>
+  <td>Low</td><td>Medium</td>
+  <td>Standard PostgreSQL database (portable/exportable); AfriStay retains ability to migrate to an alternative or Rwanda-based provider should one become available.</td>
+</tr>
+</table>
+
+<h2>7. Data Subject Rights and Redress</h2>
+<p>
+Affected individuals may exercise their rights (access, rectification, erasure, objection, portability, restriction)
+under Law N° 058/2021 by contacting AfriStay's Data Protection Officer at emmanuel.butera@afristay.rw or
+info@afristay.rw. Requests are actioned within 30 days per AfriStay's Privacy Policy and Data Protection Commitments.
+</p>
+
+<h2>8. Conclusion and Ongoing Review</h2>
+<p>
+Having assessed the necessity, proportionality, and residual risks of storing personal data with Supabase and
+Resend outside Rwanda, and having implemented the technical and organisational safeguards described above and in
+the accompanying Storage Architecture document, AfriStay LTD considers the residual risk to data subjects to be
+low and proportionate to the legitimate business need. This DPIA will be reviewed annually, upon material growth
+in data volumes, upon onboarding any new outside-Rwanda service provider, or following any data breach, consistent
+with AfriStay's Data Breach Response and Notification Procedure (AfriStay-DBRP-001).
+</p>
+
+<div class="sign-block">
+  <p>_____________________________</p>
+  <p><strong>Emmanuel BUTERA</strong><br>
+  Chief Executive Officer &amp; Data Protection Officer<br>
+  AfriStay LTD<br>
+  17 July 2026</p>
+</div>
+
+</body>
+</html>

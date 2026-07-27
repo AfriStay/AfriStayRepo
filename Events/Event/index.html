@@ -307,7 +307,7 @@ async function fetchSuggestions() {
             const rawImg = l.listing_images?.[0]?.image_url || null;
             let imgSrc = rawImg;
             if (rawImg && !rawImg.startsWith('http')) {
-                const {data:pub} = _sb.storage.from('listing_images').getPublicUrl(rawImg);
+                const {data:pub} = _sb.storage.from('listing-images').getPublicUrl(rawImg);
                 imgSrc = pub.publicUrl;
             }
             const unit  = l.category_slug === 'vehicle' ? '/day' : '/night';

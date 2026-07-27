@@ -68,7 +68,8 @@ if (typeof window !== "undefined") {
                         } else {
                             console.log(" [CONFIG] Connection test successful! Profile count:", count);
                         }
-                    });
+                    })
+                    .catch(err => console.error(" [CONFIG] Connection test threw:", err));
             }
         } catch (error) {
             console.error(" [CONFIG] Error creating Supabase client:", error);

@@ -241,7 +241,7 @@ window.fetchAndRenderSharedListings = async function(options) {
         const rawUrl = l.listing_images?.[0]?.image_url;
         let finalImageUrl = rawUrl;
         if (rawUrl && !rawUrl.startsWith('http')) {
-            const { data: pub } = sb.storage.from('listing_images').getPublicUrl(rawUrl);
+            const { data: pub } = sb.storage.from('listing-images').getPublicUrl(rawUrl);
             finalImageUrl = pub.publicUrl;
         }
         l.final_thumb_url = finalImageUrl;
