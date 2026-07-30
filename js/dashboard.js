@@ -1248,6 +1248,175 @@ function closeModal(modalId) {
 }
 
 /* ===========================
+   SHARED SHA-256 HELPER (used by admin PIN fallback + change-PIN settings)
+   =========================== */
+async function sha256Hex(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+// SHA-256 of "0000" — used only as the fallback PIN when a newly promoted admin's
+// PIN was never explicitly set. Every admin's PIN is stored per-account in
+// profiles.pin_hash; this is not a shared master password.
+const DEFAULT_PIN_HASH = '9af15b336e6a9619928537df30b2e6a2376569fcf9d7e773eccede65606529a0';
+const PIN_ATTEMPTS_KEY = 'afristay_admin_pin_attempts';
+const PIN_LOCKOUT_KEY  = 'afristay_admin_pin_lock';
+const PIN_MAX_ATTEMPTS = 5;
+const PIN_LOCKOUT_MS   = 3 * 60 * 1000;
+
+/* ===========================
+   ADMIN MFA ENFORCEMENT
+   Blocks the admin dashboard until the current session has a
+   verified second factor (AAL2), OR — if the admin has never
+   activated MFA — falls back to their 4-digit PIN as a minimum bar.
+   =========================== */
+async function enforceAdminMFA() {
+    const { data: aal, error: aalErr } = await _supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalErr) { console.error('[MFA] Could not check assurance level:', aalErr); return true; } // fail-open on infra errors, don't lock admin out
+    if (aal.currentLevel === 'aal2') return true; // already verified this session
+
+    const { data: factorsData } = await _supabase.auth.mfa.listFactors();
+    const verifiedFactor = (factorsData?.totp || []).find(f => f.status === 'verified');
+
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.id = 'mfaGateOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,15,20,.92);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;';
+
+        function renderVerifyStep() {
+            overlay.innerHTML = `
+                <div style="background:#fff;border-radius:16px;padding:32px;max-width:360px;width:90%;text-align:center;">
+                    <i class="fa-solid fa-shield-halved" style="font-size:32px;color:#EB6753;margin-bottom:12px;"></i>
+                    <h3 style="margin:0 0 6px;">Enter your 2FA code</h3>
+                    <p style="font-size:13px;color:#888;margin-bottom:18px;">Open your authenticator app and enter the 6-digit code to continue.</p>
+                    <input id="mfaCodeInput" maxlength="6" inputmode="numeric" placeholder="000000"
+                           style="width:100%;padding:12px;font-size:20px;text-align:center;letter-spacing:6px;border:1.5px solid #e8e8e8;border-radius:10px;margin-bottom:12px;">
+                    <div id="mfaError" style="color:#dc2626;font-size:12px;margin-bottom:10px;min-height:16px;"></div>
+                    <button id="mfaVerifyBtn" style="width:100%;padding:12px;background:#EB6753;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">Verify</button>
+                </div>`;
+            const input = overlay.querySelector('#mfaCodeInput');
+            const errEl = overlay.querySelector('#mfaError');
+            input.focus();
+            overlay.querySelector('#mfaVerifyBtn').onclick = async () => {
+                const code = input.value.trim();
+                if (code.length !== 6) { errEl.textContent = 'Enter the 6-digit code.'; return; }
+                const { data: challenge, error: chErr } = await _supabase.auth.mfa.challenge({ factorId: verifiedFactor.id });
+                if (chErr) { errEl.textContent = chErr.message; return; }
+                const { error: vErr } = await _supabase.auth.mfa.verify({ factorId: verifiedFactor.id, challengeId: challenge.id, code });
+                if (vErr) { errEl.textContent = 'Incorrect code. Try again.'; return; }
+                overlay.remove();
+                window.location.reload(); // clean re-init now that session is aal2
+            };
+        }
+
+        async function renderEnrollStep() {
+            // Clean up any stale unverified factor left over from a previous
+            // failed/abandoned enrollment attempt — Supabase blocks re-enrolling
+            // otherwise (duplicate friendly name / factor conflict).
+            const { data: existing } = await _supabase.auth.mfa.listFactors();
+            const stale = (existing?.totp || []).filter(f => f.status !== 'verified');
+            for (const f of stale) {
+                await _supabase.auth.mfa.unenroll({ factorId: f.id });
+            }
+
+            _supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'admin-' + Date.now() }).then(({ data, error }) => {
+                if (error) {
+                    overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:32px;max-width:360px;text-align:center;">
+                        <p style="color:#dc2626;">Could not start 2FA setup: ${error.message}</p></div>`;
+                    return;
+                }
+                overlay.innerHTML = `
+                    <div style="background:#fff;border-radius:16px;padding:32px;max-width:380px;width:90%;text-align:center;">
+                        <i class="fa-solid fa-shield-halved" style="font-size:32px;color:#EB6753;margin-bottom:12px;"></i>
+                        <h3 style="margin:0 0 6px;">Set up two-factor authentication</h3>
+                        <p style="font-size:13px;color:#888;margin-bottom:14px;">Admin accounts require 2FA. Scan this with Google Authenticator, Authy, or similar.</p>
+                        <img id="mfaQrImg" style="width:160px;height:160px;margin:0 auto 14px;display:block;">
+                        <p style="font-size:11px;color:#aaa;margin-bottom:14px;word-break:break-all;">Or enter manually: ${data.totp.secret}</p>
+                        <input id="mfaCodeInput" maxlength="6" inputmode="numeric" placeholder="000000"
+                               style="width:100%;padding:12px;font-size:20px;text-align:center;letter-spacing:6px;border:1.5px solid #e8e8e8;border-radius:10px;margin-bottom:12px;">
+                        <div id="mfaError" style="color:#dc2626;font-size:12px;margin-bottom:10px;min-height:16px;"></div>
+                        <button id="mfaVerifyBtn" style="width:100%;padding:12px;background:#EB6753;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">Confirm & Enable</button>
+                    </div>`;
+                // Set the QR image via DOM property, not string interpolation —
+                // the qr_code payload is raw SVG markup containing quote characters
+                // that would break out of an HTML attribute if templated directly.
+                overlay.querySelector('#mfaQrImg').src = data.totp.qr_code;
+                const input = overlay.querySelector('#mfaCodeInput');
+                const errEl = overlay.querySelector('#mfaError');
+                input.focus();
+                overlay.querySelector('#mfaVerifyBtn').onclick = async () => {
+                    const code = input.value.trim();
+                    if (code.length !== 6) { errEl.textContent = 'Enter the 6-digit code.'; return; }
+                    const { data: challenge, error: chErr } = await _supabase.auth.mfa.challenge({ factorId: data.id });
+                    if (chErr) { errEl.textContent = chErr.message; return; }
+                    const { error: vErr } = await _supabase.auth.mfa.verify({ factorId: data.id, challengeId: challenge.id, code });
+                    if (vErr) { errEl.textContent = 'Incorrect code. Try again.'; return; }
+                    overlay.remove();
+                    window.location.reload();
+                };
+            });
+        }
+
+        function renderPinFallback() {
+            if (Date.now() < Number(localStorage.getItem(PIN_LOCKOUT_KEY) || 0)) {
+                const remaining = Math.ceil((Number(localStorage.getItem(PIN_LOCKOUT_KEY)) - Date.now()) / 1000);
+                overlay.innerHTML = `<div style="background:#fff;border-radius:16px;padding:32px;max-width:360px;text-align:center;">
+                    <p style="color:#dc2626;">Too many attempts. Try again in ${remaining}s.</p></div>`;
+                setTimeout(renderPinFallback, 1000);
+                return;
+            }
+            overlay.innerHTML = `
+                <div style="background:#fff;border-radius:16px;padding:32px;max-width:360px;width:90%;text-align:center;">
+                    <i class="fa-solid fa-shield-halved" style="font-size:32px;color:#EB6753;margin-bottom:12px;"></i>
+                    <h3 style="margin:0 0 6px;">Enter Admin PIN</h3>
+                    <p style="font-size:13px;color:#888;margin-bottom:18px;">2FA isn't set up on this account yet. Enter your 4-digit PIN to continue.</p>
+                    <input id="pinCodeInput" maxlength="4" inputmode="numeric" type="password" placeholder="••••"
+                           style="width:100%;padding:12px;font-size:24px;text-align:center;letter-spacing:10px;border:1.5px solid #e8e8e8;border-radius:10px;margin-bottom:12px;">
+                    <div id="pinError" style="color:#dc2626;font-size:12px;margin-bottom:10px;min-height:16px;"></div>
+                    <button id="pinVerifyBtn" style="width:100%;padding:12px;background:#EB6753;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;margin-bottom:10px;">Unlock</button>
+                    <a href="#" id="pinSetupMfaLink" style="font-size:12px;color:#888;text-decoration:underline;">Set up 2FA instead (recommended)</a>
+                </div>`;
+            const input = overlay.querySelector('#pinCodeInput');
+            const errEl = overlay.querySelector('#pinError');
+            input.focus();
+            overlay.querySelector('#pinSetupMfaLink').onclick = (e) => { e.preventDefault(); renderEnrollStep(); };
+            overlay.querySelector('#pinVerifyBtn').onclick = async () => {
+                const val = input.value.trim();
+                if (!/^\d{4}$/.test(val)) { errEl.textContent = 'Enter a 4-digit PIN.'; return; }
+                const { data: prof } = await _supabase.from('profiles').select('pin_hash').eq('id', CURRENT_PROFILE.id).single();
+                const expectedHash = prof?.pin_hash || DEFAULT_PIN_HASH;
+                const hashed = await sha256Hex(val);
+                if (hashed === expectedHash) {
+                    localStorage.removeItem(PIN_ATTEMPTS_KEY);
+                    localStorage.removeItem(PIN_LOCKOUT_KEY);
+                    overlay.remove();
+                    finish(true);
+                } else {
+                    const n = Number(localStorage.getItem(PIN_ATTEMPTS_KEY) || 0) + 1;
+                    localStorage.setItem(PIN_ATTEMPTS_KEY, n);
+                    if (n >= PIN_MAX_ATTEMPTS) {
+                        localStorage.setItem(PIN_LOCKOUT_KEY, Date.now() + PIN_LOCKOUT_MS);
+                        renderPinFallback();
+                    } else {
+                        errEl.textContent = `Incorrect PIN. ${n}/${PIN_MAX_ATTEMPTS} attempts.`;
+                        input.value = '';
+                        input.focus();
+                    }
+                }
+            };
+            input.addEventListener('keydown', ev => { if (ev.key === 'Enter') overlay.querySelector('#pinVerifyBtn').click(); });
+        }
+
+        let settled = false;
+        function finish(ok) { if (!settled) { settled = true; resolve(ok); } }
+
+        document.body.appendChild(overlay);
+        if (verifiedFactor) renderVerifyStep(); else renderPinFallback();
+        // TOTP verify/enroll paths resolve via page reload (session state changed
+        // server-side); PIN success resolves in-place via finish(true) above.
+    });
+}
+
+/* ===========================
    AUTHENTICATION & ROLE
    =========================== */
 async function initAuthAndRole() {
@@ -1313,6 +1482,12 @@ async function initAuthAndRole() {
             await _supabase.auth.signOut();
             window.location.replace('/Auth/?error=banned');
             return;
+        }
+
+        // Admins must have a verified second factor for THIS session before seeing the admin dashboard
+        if (onAdminDash && CURRENT_ROLE === 'admin') {
+            const mfaSatisfied = await enforceAdminMFA();
+            if (!mfaSatisfied) return; // modal is showing â€” halt the rest of init until verified
         }
 
         // Update UI with user info
@@ -1430,9 +1605,22 @@ function initials(name) {
 async function updateUserRole(userId, newRole) {
     if (!confirm(`Change role to "${newRole}" for this user?`)) return;
     try {
-        const { error } = await _supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+        const payload = { role: newRole };
+
+        // Promoting to admin: set their PIN fallback (used only until they activate 2FA)
+        if (newRole === 'admin') {
+            const chosen = prompt('Set a 4-digit PIN for this new admin (used only as a fallback if they haven\'t set up 2FA yet).\nLeave blank to use the default PIN (0000).', '');
+            let pin = (chosen || '').trim();
+            if (pin && !/^\d{4}$/.test(pin)) {
+                toast('PIN must be exactly 4 digits — using default (0000) instead.', 'error');
+                pin = '';
+            }
+            payload.pin_hash = pin ? await sha256Hex(pin) : DEFAULT_PIN_HASH;
+        }
+
+        const { error } = await _supabase.from('profiles').update(payload).eq('id', userId);
         if (error) throw error;
-        logAudit({ action: 'user_role_changed', entityType: 'user', entityId: userId, description: 'Role changed to "' + newRole + '" by admin' });
+        logAudit({ action: 'user_role_changed', entityType: 'user', entityId: userId, description: 'Role changed to "' + newRole + '" by admin' + (newRole === 'admin' ? ' (PIN fallback set)' : '') });
         toast('Role updated successfully.', 'success');
         await loadUsersTable();
     } catch (err) {
@@ -1441,6 +1629,31 @@ async function updateUserRole(userId, newRole) {
         toast(sanitizeError(err), 'error');
     }
 }
+
+// Admin changes their own PIN fallback (Settings tab)
+async function changeAdminPin() {
+    const cur     = document.getElementById('pinCurrent')?.value.trim() || '';
+    const newPin  = document.getElementById('pinNew')?.value.trim() || '';
+    const confirmPin = document.getElementById('pinConfirm')?.value.trim() || '';
+    if (!/^\d{4}$/.test(cur))    { toast('Current PIN must be 4 digits.', 'error'); return; }
+    if (!/^\d{4}$/.test(newPin)) { toast('New PIN must be 4 digits.', 'error'); return; }
+    if (newPin !== confirmPin)   { toast('New PINs do not match.', 'error'); return; }
+
+    const { data: prof, error: fetchErr } = await _supabase.from('profiles').select('pin_hash').eq('id', CURRENT_PROFILE.id).single();
+    if (fetchErr) { toast('Could not verify current PIN: ' + fetchErr.message, 'error'); return; }
+
+    const expectedHash = prof?.pin_hash || DEFAULT_PIN_HASH;
+    const curHash = await sha256Hex(cur);
+    if (curHash !== expectedHash) { toast('Current PIN is incorrect.', 'error'); return; }
+
+    const newHash = await sha256Hex(newPin);
+    const { error } = await _supabase.from('profiles').update({ pin_hash: newHash }).eq('id', CURRENT_PROFILE.id);
+    if (error) { toast('Could not save PIN: ' + error.message, 'error'); return; }
+
+    toast('PIN updated. It\'ll be used as your fallback if 2FA isn\'t set up.', 'success');
+    ['pinCurrent', 'pinNew', 'pinConfirm'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+window.changeAdminPin = changeAdminPin;
 
 async function toggleUserBan(userId, action) {
     try {
@@ -5636,11 +5849,9 @@ async function loadOwnerWallet() {
     if (CURRENT_ROLE !== 'owner') return;
     console.log('[WALLET] Loading owner wallet...');
 
-    const { data: wallet } = await _supabase
-        .from('owner_wallets')
-        .select('*')
-        .eq('owner_id', CURRENT_PROFILE.id)
-        .maybeSingle();
+    const { data: walletRows } = await _supabase
+        .rpc('get_owner_wallet_decrypted', { p_owner_id: CURRENT_PROFILE.id });
+    const wallet = walletRows?.[0] || null;
 
     // Find or create wallet settings section
     let section = document.getElementById('ownerWalletSection');
@@ -7295,8 +7506,8 @@ window.exportSingleUser = async function(userId, displayName) {
                 const { data: rcv } = await _supabase.from('bookings').select('id, listing_id, guest_name, guest_email, start_date, end_date, total_amount, status, payment_status, payment_method, created_at').in('listing_id', lIds).order('created_at', { ascending: false });
                 receivedBookings = rcv || [];
             }
-            const { data: wallet } = await _supabase.from('owner_wallets').select('payout_method, momo_phone, momo_name, bank_name, account_number').eq('owner_id', userId).maybeSingle();
-            walletInfo = wallet;
+            const { data: walletRows } = await _supabase.rpc('get_owner_wallet_decrypted', { p_owner_id: userId });
+            walletInfo = walletRows?.[0] || null;
         }
 
         const calcNights = (b) => (b.start_date && b.end_date) ? Math.round((new Date(b.end_date) - new Date(b.start_date)) / 86400000) : null;

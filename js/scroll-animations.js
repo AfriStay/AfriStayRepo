@@ -106,8 +106,6 @@
 
         /* ── LEGAL (Privacy / Terms) ── */
         ['.legal-nav',              'up',    false],
-        ['.legal-body',             'up',    false],
-        ['.legal-updated',          'fade',  false],
 
         /* ── ONBOARDING ── */
         ['.ob-payout',              'up',    false],

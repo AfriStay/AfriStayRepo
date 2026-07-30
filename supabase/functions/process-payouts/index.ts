@@ -61,8 +61,9 @@ Deno.serve(async (req: Request) => {
     const owner = (booking.listings as any)?.profiles;
     if (!owner) { errors.push({ booking_id: booking.id, error: 'No owner' }); continue; }
 
-    // Get wallet details
-    const { data: wallet } = await sb.from('owner_wallets').select('payout_method,momo_phone,bank_name,bank_account,bank_holder').eq('owner_id', owner.id).maybeSingle();
+    // Get wallet details (decrypted server-side via RPC — sensitive fields are encrypted at rest)
+    const { data: walletRows } = await sb.rpc('get_owner_wallet_decrypted', { p_owner_id: owner.id });
+    const wallet = walletRows?.[0] || null;
 
     const { data: payout, error: pe } = await sb.from('payouts').insert({
       booking_id:     booking.id,

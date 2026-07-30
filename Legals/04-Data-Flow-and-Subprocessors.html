@@ -21,7 +21,7 @@
 
 <h1>Data Flow Diagram &amp; Sub-Processor Register</h1>
 <div class="subtitle">Supporting document for NCSA Application for Authorization to Store Personal Data Outside Rwanda</div>
-<div class="meta">Document Reference: AfriStay-DFR-001 &nbsp;|&nbsp; Version 1.0 &nbsp;|&nbsp; Date: 17 July 2026 &nbsp;|&nbsp; Prepared by: Emmanuel BUTERA, CEO &amp; Data Protection Officer, AfriStay LTD</div>
+<div class="meta">Document Reference: AfriStay-DFR-001 &nbsp;|&nbsp; Version 1.1 &nbsp;|&nbsp; Date: 17 July 2026 &nbsp;|&nbsp; Updated: 30 July 2026 &nbsp;|&nbsp; Prepared by: Emmanuel BUTERA, CEO &amp; Data Protection Officer, AfriStay LTD</div>
 
 <h2>1. Data Flow Diagram (textual)</h2>
 <div class="flow">
@@ -34,13 +34,15 @@
         |  HTTPS (TLS) — direct client calls using
         |  a restricted "anon" API key (RLS-enforced)
         v
-[Supabase Platform — United States]
+[Supabase Platform — Ireland, European Union]
    - PostgreSQL database (34 tables, RLS on all)
-   - Supabase Auth (sign up / sign in)
+   - Supabase Auth (sign up / sign in, 2FA for admins)
    - Supabase Storage (listing/event/promo media)
    - Edge Functions (booking approval, payments,
      account deletion, admin actions — hold the
      service-role key; never exposed to browser)
+   - Field-level encryption of sensitive payout data
+   - Automated audit logging + data retention jobs
         |
         |-- HTTPS (TLS) --> [Resend, United States]
         |                    sends booking/notification
@@ -61,7 +63,7 @@
   <td>1</td><td>Supabase Inc.</td>
   <td>Primary storage: database, authentication, file storage, application backend</td>
   <td>Full personal data inventory (see Storage Architecture, Section 4)</td>
-  <td>United States <span style="color:#b00">[confirm exact region]</span></td>
+  <td>Ireland, European Union (region: eu-west-1)</td>
   <td><span style="color:#b00">Data Processing Agreement to be obtained from Supabase and attached to this application</span></td>
 </tr>
 <tr>

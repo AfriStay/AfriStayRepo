@@ -24,7 +24,7 @@
 
 <h1>DATA PROTECTION IMPACT ASSESSMENT</h1>
 <div class="subtitle">For Hosting Personal Data Outside Rwanda — AfriStay LTD</div>
-<div class="meta">Document Reference: AfriStay-DPIA-001 &nbsp;|&nbsp; Version 1.0 &nbsp;|&nbsp; Date: 17 July 2026 &nbsp;|&nbsp; Prepared by: Emmanuel BUTERA, CEO &amp; Data Protection Officer, AfriStay LTD</div>
+<div class="meta">Document Reference: AfriStay-DPIA-001 &nbsp;|&nbsp; Version 1.1 &nbsp;|&nbsp; Date: 17 July 2026 &nbsp;|&nbsp; Updated: 30 July 2026 &nbsp;|&nbsp; Prepared by: Emmanuel BUTERA, CEO &amp; Data Protection Officer, AfriStay LTD</div>
 
 <h2>1. Purpose and Scope</h2>
 <p>
@@ -57,19 +57,23 @@ data, national ID data, or biometric data is collected or transferred.
 </p>
 
 <h2>4. Data Subjects and Current Volumes</h2>
-<p>As of 17 July 2026, the platform is in its pre-launch/early-operations phase. Current approximate volumes:</p>
+<p>
+As of 30 July 2026, the platform is in its pre-launch phase. Development/test booking, listing, and message data
+generated during platform build-out has been purged from the database; only genuine account holders (AfriStay team
+members and early testers) remain. Current approximate volumes:
+</p>
 <table>
 <tr><th>Data subject category</th><th>Approx. current volume</th><th>Notes</th></tr>
 <tr><td>Registered user accounts (Guests)</td><td>7</td><td>Grows with public launch and marketing</td></tr>
 <tr><td>Registered property Owners</td><td>3</td><td>Includes pending owner applications</td></tr>
 <tr><td>Internal admin/staff accounts</td><td>4</td><td>AfriStay team members</td></tr>
-<tr><td>Bookings on record</td><td>13</td><td>Includes historic/test bookings from platform development</td></tr>
-<tr><td>Property listings</td><td>4</td><td>—</td></tr>
-<tr><td>Contact-form submissions</td><td>2</td><td>—</td></tr>
+<tr><td>Bookings on record</td><td>0</td><td>Test/development bookings purged pre-launch</td></tr>
+<tr><td>Property listings</td><td>0</td><td>Test/development listings purged pre-launch</td></tr>
+<tr><td>Contact-form submissions</td><td>0</td><td>Test submissions purged pre-launch</td></tr>
 </table>
 <p>
-These figures represent current state during pre-launch testing and are expected to increase materially once the
-platform is publicly launched. AfriStay will keep this DPIA under review as volumes grow (see Section 8).
+These figures represent current state prior to public launch and are expected to increase materially once the
+platform goes live. AfriStay will keep this DPIA under review as volumes grow (see Section 8).
 </p>
 
 <h2>5. Data Flow Summary</h2>
@@ -87,7 +91,7 @@ generate the payment invoice; AfriStay never receives or stores card/mobile-mone
 <tr class="risk-med">
   <td>Unauthorized access to personal data (e.g. compromised credentials, misconfigured access)</td>
   <td>Low–Medium</td><td>High</td>
-  <td>Row Level Security enforced on every table; service-role key confined to server-side Edge Functions; Supabase Auth with hashed credentials.</td>
+  <td>Row Level Security enforced on every table; service-role key confined to server-side Edge Functions; Supabase Auth with hashed credentials; mandatory two-factor authentication for administrative accounts; automated audit logging of access to sensitive tables; periodic review of dormant/unrecognised administrator accounts.</td>
 </tr>
 <tr class="risk-low">
   <td>Data interception in transit</td>
@@ -95,9 +99,9 @@ generate the payment invoice; AfriStay never receives or stores card/mobile-mone
   <td>All traffic encrypted via HTTPS/TLS between client, Supabase, and Resend.</td>
 </tr>
 <tr class="risk-med">
-  <td>Foreign legal access to data (e.g. U.S. government requests to a U.S.-based provider)</td>
+  <td>Foreign legal access to data (database hosted in the EU under GDPR; email delivery data processed in the United States)</td>
   <td>Low</td><td>Medium</td>
-  <td>Data minimisation limits what is stored (no payment/ID/biometric data); Data Processing Agreements restrict provider use of data to service delivery; AfriStay monitors provider transparency reports.</td>
+  <td>Data minimisation limits what is stored (no payment/ID/biometric data); Data Processing Agreements restrict provider use of data to service delivery; Resend's Data Processing Addendum incorporates EU Standard Contractual Clauses and the EU-U.S. Data Privacy Framework governing its handling of any EU-linked data; AfriStay monitors provider transparency reports.</td>
 </tr>
 <tr class="risk-med">
   <td>Sub-processor data breach at Supabase or Resend</td>

@@ -21,15 +21,9 @@
 </head>
 <body>
 
-<div class="note">
-  <strong>Action needed before submitting:</strong> the region/country field below is marked <span style="color:#b00">[CONFIRM]</span> —
-  log into the Supabase Dashboard → your project → <em>Project Settings → General</em> and copy the exact region shown
-  (e.g. "West EU (Ireland)" or "East US (North Virginia)"). Fill it into Section 4 of the NCSA Application Form and here.
-</div>
-
 <h1>AfriStay LTD — Storage Architecture</h1>
 <div class="subtitle">Supporting document for NCSA Application for Authorization to Store Personal Data Outside Rwanda</div>
-<div class="meta">Document Reference: AfriStay-SA-001 &nbsp;|&nbsp; Version 1.0 &nbsp;|&nbsp; Prepared: 17 July 2026 &nbsp;|&nbsp; Prepared by: Emmanuel BUTERA, CEO &amp; Data Protection Officer, AfriStay LTD</div>
+<div class="meta">Document Reference: AfriStay-SA-001 &nbsp;|&nbsp; Version 1.1 &nbsp;|&nbsp; Prepared: 17 July 2026 &nbsp;|&nbsp; Updated: 30 July 2026 &nbsp;|&nbsp; Prepared by: Emmanuel BUTERA, CEO &amp; Data Protection Officer, AfriStay LTD</div>
 
 <h2>1. Purpose</h2>
 <p>
@@ -52,19 +46,19 @@ any payment card or mobile money credentials.
 <table>
 <tr><th>Layer</th><th>Provider</th><th>Function</th><th>Data location</th></tr>
 <tr><td>Web hosting (front-end)</td><td>AOS Ltd (aos.rw)</td><td>Serves static website pages (HTML/CSS/JS)</td><td>Rwanda</td></tr>
-<tr><td>Application database, authentication, file storage, serverless functions</td><td>Supabase Inc.</td><td>Stores all personal data described in Section 4; enforces access control; runs booking-lifecycle business logic</td><td>United States — exact region: <span style="color:#b00">[CONFIRM — see note above]</span></td></tr>
+<tr><td>Application database, authentication, file storage, serverless functions</td><td>Supabase Inc.</td><td>Stores all personal data described in Section 4; enforces access control; runs booking-lifecycle business logic</td><td>Ireland, European Union (region: eu-west-1)</td></tr>
 <tr><td>Transactional email delivery</td><td>Resend</td><td>Sends booking confirmation and notification emails (processes recipient name/email + email content in transit)</td><td>United States</td></tr>
 <tr><td>Payments</td><td>IremboPay</td><td>Processes guest payments independently; AfriStay stores only a payment reference/status, never card or mobile-money credentials</td><td>Rwanda</td></tr>
 </table>
 
 <h2>3. Database Platform</h2>
 <p>
-AfriStay's core datastore is a managed PostgreSQL database provisioned through Supabase. As of this document's
-preparation date, the database contains 34 application tables covering user accounts, listings, bookings, payments,
-reviews, notifications, and administrative logs. Every table has Row Level Security (RLS) enabled, meaning access
-to each row is enforced at the database level according to the requesting user's identity and role — a guest
-cannot read another guest's data, and an owner cannot read another owner's listings or bookings, regardless of
-what the front-end application requests.
+AfriStay's core datastore is a managed PostgreSQL database provisioned through Supabase, hosted in Ireland
+(European Union). As of this document's preparation date, the database contains 34 application tables covering
+user accounts, listings, bookings, payments, reviews, notifications, and administrative logs. Every table has Row
+Level Security (RLS) enabled, meaning access to each row is enforced at the database level according to the
+requesting user's identity and role — a guest cannot read another guest's data, and an owner cannot read another
+owner's listings or bookings, regardless of what the front-end application requests.
 </p>
 
 <h2>4. Categories of Personal Data Stored</h2>
@@ -83,11 +77,12 @@ what the front-end application requests.
 <h2>5. Business Logic and Automation</h2>
 <p>
 The booking lifecycle (submission, owner approval/rejection, payment, confirmation, expiry, cancellation) is
-enforced primarily inside the database itself, through PL/pgSQL functions and triggers (57 functions and 39
-triggers as of this document's preparation date) — for example, automatic prevention of double-bookings,
-generation of secure booking-approval tokens, and synchronisation of booking status after payment confirmation.
-Eight scheduled jobs (pg_cron) run at intervals between 5 minutes and 1 hour to expire stale bookings and release
-listing availability automatically.
+enforced primarily inside the database itself, through PL/pgSQL functions and triggers (65 functions and 39
+triggers as of this document's revision date) — for example, automatic prevention of double-bookings, generation
+of secure booking-approval tokens, synchronisation of booking status after payment confirmation, automated
+encryption of sensitive payout fields prior to storage, and automated audit-log recording of changes to sensitive
+tables. Nine scheduled jobs (pg_cron) run at intervals between 5 minutes and daily to expire stale bookings,
+release listing availability, and enforce the data retention policy (see Section 7) automatically.
 </p>
 <p>
 Sensitive operations (payment invoice creation, booking approval, account deletion, admin actions) are handled by
@@ -107,13 +102,24 @@ personal documents (e.g. ID scans) as AfriStay does not collect these.
 <ul>
   <li><strong>Encryption in transit:</strong> all communication between the AfriStay front-end, Supabase, and Resend is encrypted via HTTPS/TLS.</li>
   <li><strong>Encryption at rest:</strong> the underlying database is stored using Supabase-managed encryption at rest (per Supabase's published infrastructure documentation).</li>
+  <li><strong>Field-level encryption:</strong> sensitive payout fields (bank account numbers, mobile money numbers, account holder names) are additionally encrypted at the application/database layer using symmetric encryption before being written to disk, independent of the underlying infrastructure encryption. The encryption key is held in a dedicated secrets vault, never in application source code.</li>
   <li><strong>Access control:</strong> Row Level Security on every table; a public/anonymous API key restricted by RLS is used by the website, while the unrestricted service-role key is confined to server-side Edge Functions only.</li>
   <li><strong>Authentication:</strong> Supabase Auth manages user sign-up/sign-in with hashed credentials; AfriStay never stores plaintext passwords.</li>
+  <li><strong>Administrative access control:</strong> administrative dashboard access requires standard password authentication and mandatory two-factor authentication (TOTP) for full access; accounts that have not yet activated two-factor authentication are gated by an individually-assigned fallback PIN, used only until two-factor authentication is enabled.</li>
   <li><strong>Webhook integrity:</strong> payment-status webhooks from IremboPay are verified using HMAC-SHA256 signature validation before any booking is marked as paid.</li>
-  <li><strong>Audit logging:</strong> administrative actions (e.g. listing approval, account deletion) are recorded in an internal audit log table.</li>
-  <li><strong>Backups:</strong> automated backups are maintained by Supabase according to AfriStay's subscription plan. <span style="color:#b00">[CONFIRM backup frequency/retention shown in Supabase Dashboard → Database → Backups and state it here.]</span></li>
+  <li><strong>Audit logging:</strong> every create, update, and delete action on sensitive tables (user profiles, payout wallets, payments, bookings) is automatically recorded via database triggers, capturing the acting user, their role, and a before/after snapshot of the affected record.</li>
+  <li><strong>Automated data retention enforcement:</strong> accounts marked for deletion have their personal data automatically anonymised after a 30-day retention window via a scheduled job, rather than relying on manual action.</li>
+  <li><strong>Periodic access review:</strong> a dedicated internal function allows AfriStay's Data Protection Officer to review all administrator accounts, flagging dormant (90+ day inactive) or unrecognised accounts for review.</li>
+  <li><strong>Backups:</strong> automated backups are maintained by Supabase according to AfriStay's subscription plan.</li>
   <li><strong>Vendor compliance:</strong> Supabase publishes independent security compliance reports (including SOC 2 Type II) via its public trust portal; AfriStay maintains a Data Processing Agreement with each infrastructure provider (see accompanying Data Flow Diagram &amp; Sub-Processor Register).</li>
 </ul>
+
+<h2>7a. Incident Response</h2>
+<p>
+AfriStay maintains a written Data Breach Response and Notification Procedure (AfriStay-DBRP-001) defining
+containment, assessment, notification (to affected data subjects and the NCSA where applicable), and post-incident
+review steps in the event of a security incident, consistent with Law N° 058/2021.
+</p>
 
 <h2>8. Data Subject Rights</h2>
 <p>
