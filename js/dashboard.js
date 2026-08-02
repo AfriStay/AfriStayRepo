@@ -1280,7 +1280,7 @@ async function enforceAdminMFA() {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
         overlay.id = 'mfaGateOverlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,15,20,.92);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,15,20,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;';
 
         function renderVerifyStep() {
             overlay.innerHTML = `
