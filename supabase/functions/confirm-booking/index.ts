@@ -116,6 +116,21 @@ serve(async (req) => {
   if (req.method !== 'POST') return fail('Method not allowed', 405);
 
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+  // This function marks a booking as confirmed AND credits the owner's wallet
+  // — it previously had no caller authentication at all, meaning anyone who
+  // knew a booking_id (trivially their own) could trigger a payout without
+  // ever paying. Locked to admin-only; nothing in the live payment flow
+  // (approve-booking + irembo-webhook) calls this, so this restriction
+  // breaks no existing functionality.
+  const authHeader = req.headers.get('Authorization') || '';
+  if (!authHeader.startsWith('Bearer ')) return fail('Unauthorized', 401);
+  const callerToken = authHeader.slice('Bearer '.length);
+  const { data: { user: caller }, error: callerErr } = await sb.auth.getUser(callerToken);
+  if (callerErr || !caller) return fail('Unauthorized', 401);
+  const { data: callerProfile } = await sb.from('profiles').select('role').eq('id', caller.id).maybeSingle();
+  if (callerProfile?.role !== 'admin') return fail('Admin access required', 403);
+
   let body: Record<string,string>; try { body = await req.json(); } catch { return fail('Invalid JSON'); }
   const { booking_id } = body;
   if (!booking_id) return fail('booking_id required');

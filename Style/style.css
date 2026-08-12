@@ -594,6 +594,25 @@
     }
 }
 
+.cta-phone {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.cta-phone span {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+.cta-phone a {
+    color: #fff;
+    text-decoration: none;
+}
+.cta-phone strong {
+    font-size: 1.3rem;
+    color: #fff;
+    font-family: 'Playfair Display', serif;
+}
+
 /* ── Small phones: better sizing across all pages ── */
 @media (max-width: 480px) {
     /* Minimum 44px touch targets */

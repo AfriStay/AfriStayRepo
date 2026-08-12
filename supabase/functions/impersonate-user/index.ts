@@ -70,6 +70,18 @@ Deno.serve(async (req: Request) => {
       return err(linkErr?.message || 'Failed to generate magic link', 500);
     }
 
+    // 6. Server-side audit log — authoritative, cannot be bypassed by calling
+    // this function directly (e.g. with a stolen token) instead of through the
+    // dashboard UI, unlike a client-side-only log call.
+    await adminClient.from('audit_logs').insert({
+      actor_id: caller.id,
+      actor_role: 'admin',
+      action: 'impersonate_user',
+      table_name: 'profiles',
+      record_id: targetUserId,
+      description: `Admin ${caller.email} generated an impersonation link for ${targetUser.email}`,
+    });
+
     return new Response(
       JSON.stringify({ url: linkData.properties.action_link, email: targetUser.email }),
       { status: 200, headers: CORS },

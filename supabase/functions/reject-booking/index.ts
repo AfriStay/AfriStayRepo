@@ -87,6 +87,8 @@ serve(async (req) => {
   let reason: string | undefined;
   let isGet = false;
 
+  let callerId: string | null = null;
+
   if (req.method === 'GET') {
     isGet = true;
     const url   = new URL(req.url);
@@ -97,12 +99,16 @@ serve(async (req) => {
     const { data: b } = await sb.from('bookings').select('id, status').eq('approval_token', token).single();
     if (!b) return new Response(`<html><body style="font-family:system-ui;text-align:center;padding:60px"><h2>Link invalid or expired</h2><p><a href="${origin}">Back to AfriStay</a></p></body></html>`, { status: 400, headers: { 'Content-Type': 'text/html' } });
     bookingId = b.id;
+    // The unguessable per-booking token itself is the authorization here — no
+    // additional ownership check needed since only the real owner ever
+    // received this link by email.
   } else if (req.method === 'POST') {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return fail('Unauthorized', 401);
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authErr } = await sb.auth.getUser(token);
     if (authErr || !user) return fail('Unauthorized', 401);
+    callerId = user.id;
 
     let body: Record<string, string>;
     try { body = await req.json(); }
@@ -117,13 +123,27 @@ serve(async (req) => {
   /* Fetch booking */
   const { data: booking } = await sb
     .from('bookings')
-    .select('*, listings(title, currency), profiles!bookings_user_id_fkey(full_name, email)')
+    .select('*, listings(title, currency, owner_id), profiles!bookings_user_id_fkey(full_name, email)')
     .eq('id', bookingId!)
     .single();
 
   if (!booking) {
     if (isGet) return new Response(`<html><body style="font-family:system-ui;text-align:center;padding:60px"><h2>Booking not found</h2></body></html>`, { status: 404, headers: { 'Content-Type': 'text/html' } });
     return fail('Booking not found', 404);
+  }
+
+  // POST path: caller was authenticated (logged in), but authentication alone
+  // isn't authorization — verify they actually own the listing this booking
+  // belongs to, or are an admin, before letting them reject someone else's
+  // booking.
+  if (callerId) {
+    const isOwner = booking.listings?.owner_id === callerId;
+    let isAdmin = false;
+    if (!isOwner) {
+      const { data: callerProfile } = await sb.from('profiles').select('role').eq('id', callerId).maybeSingle();
+      isAdmin = callerProfile?.role === 'admin';
+    }
+    if (!isOwner && !isAdmin) return fail('Forbidden: not your listing', 403);
   }
 
   /* Update */

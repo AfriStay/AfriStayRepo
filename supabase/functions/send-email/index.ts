@@ -616,6 +616,7 @@ serve(async (req) => {
 
   const authHeader = req.headers.get('Authorization') ?? '';
   if (!authHeader.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401);
+  const token = authHeader.slice('Bearer '.length);
 
   const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
   if (!RESEND_API_KEY) return json({ error: 'Email service not configured. Set RESEND_API_KEY in Edge Function secrets.' }, 500);
@@ -623,6 +624,28 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { type } = body;
+
+    // 'custom' and 'owner_invite' let the caller set arbitrary to/subject/body/
+    // sender fields — previously only checked that *some* Bearer token was
+    // present (never actually validated), which let anyone send phishing-style
+    // emails "via AfriStay" to any address. Require a genuine, verified admin
+    // session for these two; transactional booking emails below stay reachable
+    // with just the anon key since real guests without accounts need them, and
+    // their content is looked up server-side from a real booking_id, not
+    // caller-supplied.
+    if (type === 'owner_invite' || type === 'custom') {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+      const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+      const authClient  = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user }, error: authErr } = await authClient.auth.getUser(token);
+      if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+
+      const adminClient = createClient(supabaseUrl, serviceKey);
+      const { data: profile } = await adminClient.from('profiles').select('role').eq('id', user.id).maybeSingle();
+      if (profile?.role !== 'admin') return json({ error: 'Admin access required' }, 403);
+    }
 
     // ── owner_invite ──────────────────────────────────────────────
     if (type === 'owner_invite') {

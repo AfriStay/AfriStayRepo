@@ -46,6 +46,27 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'userId is required' }), { status: 400, headers: CORS });
     }
 
+    // Capture who's being deleted before the row is gone, for the audit record
+    const { data: targetProfile } = await adminClient
+      .from('profiles')
+      .select('email, full_name, role')
+      .eq('id', userId)
+      .maybeSingle();
+
+    // Server-side audit log — recorded via the service role, since auth.uid()
+    // is null in that context and the automatic DB trigger can't attribute
+    // this action to the acting admin on its own. Logged before deletion so
+    // the record survives even if a downstream step fails partway.
+    await adminClient.from('audit_logs').insert({
+      actor_id: caller.id,
+      actor_role: 'admin',
+      action: 'delete_account',
+      table_name: 'profiles',
+      record_id: userId,
+      old_data: targetProfile || null,
+      description: `Admin ${caller.email} permanently deleted account ${targetProfile?.email || userId}`,
+    });
+
     // Delete from auth.users (profile cascades or we delete it first)
     await adminClient.from('profiles').delete().eq('id', userId);
     const { error: deleteErr } = await adminClient.auth.admin.deleteUser(userId);

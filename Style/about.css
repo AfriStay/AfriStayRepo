@@ -481,6 +481,10 @@ body {
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.8);
 }
+.cta-phone a {
+    color: #fff;
+    text-decoration: none;
+}
 .cta-phone strong {
     font-size: 1.3rem;
     color: white;
